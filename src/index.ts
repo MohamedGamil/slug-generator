@@ -235,7 +235,7 @@ export function toSlug(text: string, options: ToSlugOptions = {}): string {
     throw new Error(`Sanitized slug length (${sanitized.length}) is less than minimum required length (${minLength}).`);
   }
 
-  console.log(text, sanitized);
+  // console.log(text, sanitized);
 
   return sanitized;
 }
