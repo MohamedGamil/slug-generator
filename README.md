@@ -7,8 +7,8 @@ A powerful, light-weight utility package for generating random cryptographically
 - **Secure Slug Generation**: Create cryptographically secure random identifier strings using configurable character sets.
 - **Unicode-safe Text Sanitization**: Normalize and convert arbitrary strings into URL-safe slugs with accented characters properly decomposed.
 - **Configurable Casing**: Convert to lowercase by default, or preserve the original casing options.
-- **Configurable Spacing**: Strip all spaces completely by default, or map them cleanly to separators.
-- **Custom Separators**: Use standard hyphens, underscores, or custom multi-character separators.
+- **Configurable Spacing**: Replace spaces with the separator by default (`preserveSpace: false`), or leave space characters intact in the sanitized slug (`preserveSpace: true`).
+- **Custom Separators**: Use a custom single-character URL-safe separator (e.g. `'_'`, defaults to `'-'`).
 - **Strict Configuration Boundaries**: Robust checks against floating-point values and invalid limits configuration.
 - **Modern Module Resolution**: Fully supports ESM imports and typed exports natively.
 
@@ -46,18 +46,18 @@ const customId = generateSlug({
 ```typescript
 import { toSlug, slugify } from '@mgamil/slug-generator';
 
-// Standard sanitization (spaces stripped by default)
+// Standard sanitization (spaces replaced by separator by default)
 const slug = toSlug('Hello World! 🌟');
-console.log(slug); // "helloworld"
+console.log(slug); // "hello-world"
 
-// Preserving spaces (maps to separator)
+// Preserving space characters intact
 const slugWithSpaces = toSlug('Hello World!', { preserveSpace: true });
-console.log(slugWithSpaces); // "hello-world"
+console.log(slugWithSpaces); // "hello world"
 
 // Custom separators & preserved casing
 const camelSlug = slugify('Hello World!', {
   preserveCase: true,
-  preserveSpace: true,
+  preserveSpace: false,
   separator: '_'
 });
 console.log(camelSlug); // "Hello_World"

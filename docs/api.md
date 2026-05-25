@@ -33,20 +33,24 @@ Sanitizes arbitrary UTF-8 text into a URL-friendly slug. Alias: `slugify`.
 #### Options (`ToSlugOptions`)
 All options are optional:
 * **`preserveCase`** (`boolean`): If `true`, preserves the original case of characters. If `false` (default), lowercases all characters.
-* **`preserveSpace`** (`boolean`): If `true`, preserves spaces (replacing them with the separator). If `false` (default), strips all whitespace characters from the string completely.
+* **`preserveSpace`** (`boolean`): If `true`, spaces are preserved as space characters `" "` (consecutive spaces collapsed, leading/trailing trimmed). If `false` (default), all spaces are replaced by the `separator` character.
 * **`minLength`** (`number`): Configures the minimum allowable sanitized length. Defaults to `1`. Must be an integer >= 1.
 * **`maxLength`** (`number`): Configures the maximum allowable sanitized length. Defaults to `128`. Must be an integer <= 128.
-* **`separator`** (`string`): The character or string used to replace spaces/special characters when `preserveSpace` is `true`. Defaults to `'-'`.
+* **`separator`** (`string`): A single custom character used to replace spaces when `preserveSpace` is `false` (or other whitespace/hyphens/underscores when `preserveSpace` is `true`). Defaults to `'-'`. Must be exactly 1 character long and must be a URL-safe character (`a-zA-Z0-9-_.~`).
+* **`allowedCharacters`** (`string`): A string containing custom characters that are allowed to remain in the sanitized slug. Only characters from the predefined URL-safe set (`a-zA-Z0-9-_.~`) are allowed.
 
 #### Exception/Trimming Flow
-1. Normalizes the string decomposes accents (e.g., `é` -> `e`).
-2. Converts string to lowercase (if `preserveCase` is not `true`).
-3. Strips all whitespace characters (if `preserveSpace` is not `true`).
-4. Replaces any non-alphanumeric, non-hyphen, non-underscore, and non-space characters with an empty string.
-5. Replaces combinations of spacing/dashes/underscores with the `separator`.
-6. Trims leading and trailing occurrences of the `separator` (handles multi-character separators correctly).
-7. If the length exceeds `maxLength`, slices the string to `maxLength` and re-trims trailing separators.
-8. Throws an `Error` if the final slug length is less than `minLength`.
+1. Normalizes the string and decomposes accents (e.g., `é` -> `e`).
+2. Validates `separator` configuration (throws an exception if it is not a single, URL-safe character).
+3. Validates `allowedCharacters` configuration (throws an exception if any configured custom allowed character is not in the predefined URL-safe set).
+4. Converts string to lowercase (if `preserveCase` is not `true`).
+5. Strips any character from the text that is not alphanumeric, a space, hyphen, underscore, or in `allowedCharacters`.
+6. Handles spacing:
+   - If `preserveSpace` is `true`: replaces tabs/newlines/hyphens/underscores with `separator`, then collapses consecutive spaces.
+   - If `preserveSpace` is `false` (default): replaces all spaces/whitespace/hyphens/underscores with `separator`.
+7. Trims leading and trailing occurrences of the `separator` and space characters (if `preserveSpace` is `true`).
+8. If the length exceeds `maxLength`, slices the string to `maxLength` and re-trims trailing separators/spaces.
+9. Throws an `Error` if the final slug length is less than `minLength`.
 
 #### Exceptions
 Throws an `Error` if:
@@ -55,6 +59,10 @@ Throws an `Error` if:
 * Configured `minLength` is less than `1`.
 * Configured `maxLength` exceeds `128`.
 * Configured `minLength` is greater than `maxLength`.
+* `separator` is specified but is not a string of length exactly 1.
+* `separator` is specified but is not a URL-safe character (`a-zA-Z0-9-_.~`).
+* `allowedCharacters` is specified but is not a string.
+* Any character in `allowedCharacters` is not URL-safe (`a-zA-Z0-9-_.~`).
 * The final sanitized slug is shorter than `minLength` (e.g., if input text has only accents/emojis and spaces).
 
 ---
@@ -74,27 +82,26 @@ const shortSlug = generateSlug({
 console.log(shortSlug); // e.g. "a3_"
 ```
 
-### Multi-Character Separators in Sanitization
+### Custom Allowed Characters in Sanitization
 ```typescript
 import { toSlug } from '@mgamil/slug-generator';
 
-const slug = toSlug('abcabc Hello World abc', {
-  separator: 'abc',
-  preserveSpace: true
+// Allow dot and tilde in the output slug
+const slug = toSlug('hello.world~', {
+  allowedCharacters: '.~'
 });
-// Leading/trailing 'abc' instances are trimmed out completely
-console.log(slug); // "helloabcyourabcworld"
+console.log(slug); // "hello-world~" (space replaced by default separator '-', dot/tilde preserved)
 ```
 
-### Edge Case String Sanitization
+### Space Preservation in Sanitization
 ```typescript
 import { toSlug } from '@mgamil/slug-generator';
 
-// Accents are decomposed, emoji is stripped, default preserveSpace = false
+// Default preserveSpace = false: spaces replaced by separator '-'
 const slug = toSlug('Café ☕️ Time');
-console.log(slug); // "cafetime"
+console.log(slug); // "cafe-time"
 
-// Accents decomposed, emoji stripped, preserveSpace = true
+// preserveSpace = true: spaces left as actual space characters
 const slugWithSpace = toSlug('Café ☕️ Time', { preserveSpace: true });
-console.log(slugWithSpace); // "cafe-time"
+console.log(slugWithSpace); // "cafe time"
 ```

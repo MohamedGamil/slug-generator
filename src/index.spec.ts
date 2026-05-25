@@ -90,37 +90,44 @@ describe('slug-generator', () => {
     });
 
     it('should handle null or undefined options gracefully', () => {
-      expect(toSlug('Hello World', null as any)).toBe('helloworld');
-      expect(toSlug('Hello World', undefined)).toBe('helloworld');
+      expect(toSlug('Hello World', null as any)).toBe('hello-world');
+      expect(toSlug('Hello World', undefined)).toBe('hello-world');
     });
 
-    it('should properly trim multi-character separators from start and end', () => {
-      expect(toSlug('abcfooabc', { separator: 'abc', preserveSpace: true })).toBe('foo');
-      expect(toSlug('abcabcfooabcabc', { separator: 'abc', preserveSpace: true })).toBe('foo');
-      expect(toSlug('--foo--', { separator: '--', preserveSpace: true })).toBe('foo');
+    it('should throw error if separator option is invalid', () => {
+      expect(() => toSlug('text', { separator: 'abc' })).toThrow('Separator must be exactly 1 character long.');
+      expect(() => toSlug('text', { separator: '' })).toThrow('Separator must be exactly 1 character long.');
+      expect(() => toSlug('text', { separator: '@' })).toThrow("Separator character '@' is not URL safe.");
+      expect(() => toSlug('text', { separator: 123 as any })).toThrow('Separator option must be a string.');
     });
 
-    it('should convert text to lowercase and URL safe slug with spaces removed by default (preserveSpace = false)', () => {
-      expect(toSlug('Hello World!')).toBe('helloworld');
-      expect(toSlug('  Accented: éàû  ')).toBe('accentedeau');
+    it('should properly trim valid single-character separators from start and end', () => {
+      expect(toSlug('_foo_', { separator: '_', preserveSpace: true })).toBe('foo');
+      expect(toSlug('~foo~', { separator: '~', preserveSpace: true })).toBe('foo');
+      expect(toSlug('  _foo_  ', { separator: '_', preserveSpace: true })).toBe('foo');
+    });
+
+    it('should convert text to lowercase and URL safe slug with spaces replaced by separator by default (preserveSpace = false)', () => {
+      expect(toSlug('Hello World!')).toBe('hello-world');
+      expect(toSlug('  Accented: éàû  ')).toBe('accented-eau');
       expect(toSlug('Some_Under_Scores-And-Spaces')).toBe('some-under-scores-and-spaces');
     });
 
-    it('should preserve spaces and convert them to separator if preserveSpace is true', () => {
-      expect(toSlug('Hello World!', { preserveSpace: true })).toBe('hello-world');
-      expect(toSlug('  Accented: éàû  ', { preserveSpace: true })).toBe('accented-eau');
+    it('should preserve spaces as space characters and collapse/trim them if preserveSpace is true', () => {
+      expect(toSlug('Hello World!', { preserveSpace: true })).toBe('hello world');
+      expect(toSlug('  Accented: éàû  ', { preserveSpace: true })).toBe('accented eau');
       expect(toSlug('Some_Under_Scores-And-Spaces', { preserveSpace: true })).toBe('some-under-scores-and-spaces');
     });
 
     it('should preserve casing if preserveCase option is true', () => {
-      expect(toSlug('Hello World!', { preserveCase: true })).toBe('HelloWorld');
-      expect(toSlug('Hello World!', { preserveCase: true, preserveSpace: true })).toBe('Hello-World');
-      expect(toSlug('Preserve CASE', { preserveCase: true })).toBe('PreserveCASE');
+      expect(toSlug('Hello World!', { preserveCase: true })).toBe('Hello-World');
+      expect(toSlug('Hello World!', { preserveCase: true, preserveSpace: true })).toBe('Hello World');
+      expect(toSlug('Preserve CASE', { preserveCase: true })).toBe('Preserve-CASE');
     });
 
     it('should use custom separator', () => {
-      expect(toSlug('Hello World!', { separator: '_', preserveSpace: true })).toBe('hello_world');
-      expect(toSlug('Hello World!', { separator: '' })).toBe('helloworld');
+      expect(toSlug('Hello World!', { separator: '_', preserveSpace: false })).toBe('hello_world');
+      expect(toSlug('Hello World!', { separator: '~', preserveSpace: false })).toBe('hello~world');
     });
 
     it('should truncate to maxLength', () => {
@@ -138,10 +145,22 @@ describe('slug-generator', () => {
       expect(() => toSlug('!!!', { minLength: 1 })).toThrow();
     });
 
+    it('should validate allowedCharacters option and throw if not URL safe', () => {
+      expect(toSlug('hello.world~', { allowedCharacters: '.~' })).toBe('hello.world~'); // dot and tilde are allowed and preserved
+      expect(toSlug('hello.world~', { allowedCharacters: '.~', separator: '.' })).toBe('hello.world~');
+      expect(() => toSlug('hello', { allowedCharacters: '@' })).toThrow("Allowed character '@' is not URL safe.");
+      expect(() => toSlug('hello', { allowedCharacters: '!' })).toThrow("Allowed character '!' is not URL safe.");
+      expect(() => toSlug('hello', { allowedCharacters: 123 as any })).toThrow('Allowed characters option must be a string.');
+    });
+
+    it('should strip non-allowed characters from given text without throwing', () => {
+      expect(toSlug('hello @ world! ☕️', { allowedCharacters: '.', preserveSpace: true })).toBe('hello world');
+    });
+
     it('should behave identically with the slugify alias', () => {
-      expect(slugify('Hello World!')).toBe('helloworld');
-      expect(slugify('Hello World!', { preserveSpace: true })).toBe('hello-world');
-      expect(slugify('Hello World!', { preserveCase: true, preserveSpace: true, separator: '_' })).toBe('Hello_World');
+      expect(slugify('Hello World!')).toBe('hello-world');
+      expect(slugify('Hello World!', { preserveSpace: true })).toBe('hello world');
+      expect(slugify('Hello World!', { preserveCase: true, preserveSpace: false, separator: '_' })).toBe('Hello_World');
     });
   });
 });
