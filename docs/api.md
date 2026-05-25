@@ -1,4 +1,4 @@
-# API Reference - @mgamil/slug-generator
+# API Reference - Slug Generator
 
 This document contains a detailed specification of the types, functions, configuration limits, and exception rules in the `@mgamil/slug-generator` package.
 

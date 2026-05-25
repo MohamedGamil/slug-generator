@@ -1,4 +1,4 @@
-# @mgamil/slug-generator
+# Slug Generator
 
 A powerful, light-weight utility package for generating random cryptographically secure slugs and sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints.
 
