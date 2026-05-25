@@ -6,6 +6,7 @@ A powerful, light-weight utility package for generating random cryptographically
 
 - **Secure Slug Generation**: Create cryptographically secure random identifier strings using configurable character sets.
 - **Unicode-safe Text Sanitization**: Normalize and convert arbitrary strings into URL-safe slugs with accented characters properly decomposed.
+- **Phonetic Transliteration**: Convert non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul) to their phonetic spoken ASCII equivalents, avoiding empty slugs or validation exceptions for non-Latin inputs.
 - **Configurable Casing**: Convert to lowercase by default, or preserve the original casing options.
 - **Configurable Spacing**: Replace spaces with the separator by default (`preserveSpace: false`), or leave space characters intact in the sanitized slug (`preserveSpace: true`).
 - **Custom Separators**: Use a custom single-character URL-safe separator (e.g. `'_'`, defaults to `'-'`).
@@ -61,6 +62,10 @@ const camelSlug = slugify('Hello World!', {
   separator: '_'
 });
 console.log(camelSlug); // "Hello_World"
+
+// Phonetic Transliteration of non-Latin scripts (Arabic, Hebrew, Cyrillic, Chinese, etc.)
+const nonLatinSlug = toSlug('مرحبا hello שָׁלוֹם');
+console.log(nonLatinSlug); // "mrhba-hello-shalom"
 ```
 
 ## Documentation

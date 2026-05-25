@@ -5,6 +5,7 @@ All notable changes to the `@mgamil/slug-generator` package will be documented i
 ## [1.1.0] - 2026-05-26
 
 ### Added
+- Zero-dependency phonetic transliteration (romanization) support for major non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul) in `toSlug` to cleanly convert non-Latin inputs into phonetic URL-safe slugs.
 - New `toSlug` and `slugify` (alias) utility functions to convert any arbitrary UTF-8 text into a URL-safe slug.
 - Option `preserveSpace` (defaults to `false` to replace spaces with the separator character, or set to `true` to leave space characters intact in the sanitized slug).
 - Option `preserveCase` in `toSlug` (defaults to `false` to lowercase the slug).

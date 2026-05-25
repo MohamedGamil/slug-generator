@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import { Transliterator } from './transliterator.js';
 
 const DEFAULT_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const URL_SAFE_CHARACTERS = new Set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~');
@@ -169,8 +170,15 @@ export function toSlug(text: string, options: ToSlugOptions = {}): string {
     throw new Error('Minimum slug length cannot be greater than maximum slug length.');
   }
 
+  let sanitized = text;
+
+  // Transliterate non-Latin scripts to their phonetic ASCII equivalents before normalization
+  if (Transliterator.hasNonAscii(sanitized)) {
+    sanitized = Transliterator.transliterate(sanitized);
+  }
+
   // Normalize to decompose accents (e.g. é -> e)
-  let sanitized = text
+  sanitized = sanitized
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 

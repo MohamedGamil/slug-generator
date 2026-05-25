@@ -40,10 +40,10 @@ All options are optional:
 * **`allowedCharacters`** (`string`): A string containing custom characters that are allowed to remain in the sanitized slug. Only characters from the predefined URL-safe set (`a-zA-Z0-9-_.~`) are allowed.
 
 #### Exception/Trimming Flow
-1. Normalizes the string and decomposes accents (e.g., `é` -> `e`).
-2. Validates `separator` configuration (throws an exception if it is not a single, URL-safe character).
-3. Validates `allowedCharacters` configuration (throws an exception if any configured custom allowed character is not in the predefined URL-safe set).
-4. Converts string to lowercase (if `preserveCase` is not `true`).
+1. Validates options parameters and throws immediate exceptions if `text` is not a string, or if configured bounds/types (`minLength`, `maxLength`, `separator`, `allowedCharacters`) are invalid or not URL-safe.
+2. Identifies if the input contains non-ASCII characters and transliterates supported non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul syllables) into their phonetic ASCII equivalents.
+3. Normalizes the string and decomposes accents (e.g., `é` -> `e`).
+4. Converts the string to lowercase (unless `preserveCase` is set to `true`).
 5. Strips any character from the text that is not alphanumeric, a space, hyphen, underscore, or in `allowedCharacters`.
 6. Handles spacing:
    - If `preserveSpace` is `true`: replaces tabs/newlines/hyphens/underscores with `separator`, then collapses consecutive spaces.
@@ -105,3 +105,24 @@ console.log(slug); // "cafe-time"
 const slugWithSpace = toSlug('Café ☕️ Time', { preserveSpace: true });
 console.log(slugWithSpace); // "cafe time"
 ```
+
+### Phonetic Transliteration of non-Latin Scripts
+```typescript
+import { toSlug } from '@mgamil/slug-generator';
+
+// Cyrillic script
+console.log(toSlug('привет')); // "privet"
+
+// Arabic script
+console.log(toSlug('مرحبا')); // "mrhba"
+
+// Chinese Hanzi
+console.log(toSlug('你好')); // "nihao"
+
+// Japanese Hiragana
+console.log(toSlug('こんにちは')); // "konnichiha"
+
+// Korean Hangul syllables
+console.log(toSlug('안녕하세요')); // "annyeonghaseyo"
+```
+

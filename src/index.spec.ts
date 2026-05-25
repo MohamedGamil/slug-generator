@@ -157,6 +157,20 @@ describe('slug-generator', () => {
       expect(toSlug('hello @ world! ☕️', { allowedCharacters: '.', preserveSpace: true })).toBe('hello world');
     });
 
+    it('should phonetically transliterate Arabic, Hebrew, Chinese, Japanese, Korean, Cyrillic, and Greek characters', () => {
+      expect(toSlug('مرحبا')).toBe('mrhba');
+      expect(toSlug('שלום')).toBe('shlvm');
+      expect(toSlug('你好')).toBe('nihao');
+      expect(toSlug('안녕하세요')).toBe('annyeonghaseyo');
+      expect(toSlug('こんにちは')).toBe('konnichiha');
+      expect(toSlug('привет')).toBe('privet');
+      expect(toSlug('γεια')).toBe('geia');
+      
+      expect(toSlug('مرحبا hello עולם')).toBe('mrhba-hello-avlm');
+      expect(toSlug('שלום world', { preserveSpace: true })).toBe('shlvm world');
+      expect(toSlug('你好 hello', { preserveSpace: false })).toBe('nihao-hello');
+    });
+
     it('should behave identically with the slugify alias', () => {
       expect(slugify('Hello World!')).toBe('hello-world');
       expect(slugify('Hello World!', { preserveSpace: true })).toBe('hello world');
