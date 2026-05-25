@@ -5,14 +5,28 @@ const DEFAULT_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01
 export interface GenerateSlugOptions {
   length?: number;
   alphabet?: string;
+  minLength?: number;
+  maxLength?: number;
 }
 
 export function generateSlug(options: GenerateSlugOptions = {}): string {
   const length = options.length ?? 8;
   const alphabet = options.alphabet ?? DEFAULT_ALPHABET;
+  const minLength = options.minLength ?? 5;
+  const maxLength = options.maxLength ?? 64;
 
-  if (length < 5 || length > 64) {
-    throw new Error('Slug length must be between 5 and 64 characters.');
+  if (minLength < 2) {
+    throw new Error('Minimum slug length configuration cannot be less than 2.');
+  }
+  if (maxLength > 64) {
+    throw new Error('Maximum slug length configuration cannot exceed 64.');
+  }
+  if (minLength > maxLength) {
+    throw new Error('Minimum slug length cannot be greater than maximum slug length.');
+  }
+
+  if (length < minLength || length > maxLength) {
+    throw new Error(`Slug length must be between ${minLength} and ${maxLength} characters.`);
   }
 
   let slug = '';

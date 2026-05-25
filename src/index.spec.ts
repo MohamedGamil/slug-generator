@@ -20,12 +20,37 @@ describe('slug-generator', () => {
     }
   });
 
-  it('should throw error for length < 5', () => {
+  it('should throw error for length < 5 by default', () => {
     expect(() => generateSlug({ length: 4 })).toThrow();
   });
 
-  it('should throw error for length > 64', () => {
+  it('should throw error for length > 64 by default', () => {
     expect(() => generateSlug({ length: 65 })).toThrow();
+  });
+
+  it('should allow configurable minLength down to 2', () => {
+    const slug = generateSlug({ length: 2, minLength: 2 });
+    expect(slug).toHaveLength(2);
+  });
+
+  it('should throw error if configurable minLength is less than 2', () => {
+    expect(() => generateSlug({ length: 5, minLength: 1 })).toThrow('Minimum slug length configuration cannot be less than 2.');
+  });
+
+  it('should throw error if configurable maxLength exceeds 64', () => {
+    expect(() => generateSlug({ length: 5, maxLength: 65 })).toThrow('Maximum slug length configuration cannot exceed 64.');
+  });
+
+  it('should throw error if minLength > maxLength', () => {
+    expect(() => generateSlug({ length: 5, minLength: 10, maxLength: 8 })).toThrow('Minimum slug length cannot be greater than maximum slug length.');
+  });
+
+  it('should throw error if length is below configurable minLength', () => {
+    expect(() => generateSlug({ length: 3, minLength: 4 })).toThrow('Slug length must be between 4 and 64 characters.');
+  });
+
+  it('should throw error if length is above configurable maxLength', () => {
+    expect(() => generateSlug({ length: 20, maxLength: 15 })).toThrow('Slug length must be between 5 and 15 characters.');
   });
 
   it('should verify low collision probability', () => {
