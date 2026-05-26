@@ -6,8 +6,10 @@ This document contains a detailed specification of the types, functions, configu
 
 ## Functions
 
-### `generateSlug(options?: GenerateSlugOptions): string`
+### `generateSlug(options?: GenerateSlugOptions | number): string`
 Generates a cryptographically secure random slug using a bias-free selection algorithm.
+
+If `options` is a `number`, it is treated as the configuration for the target `length` of the generated slug (with defaults applied for other options).
 
 #### Options (`GenerateSlugOptions`)
 All options are optional:

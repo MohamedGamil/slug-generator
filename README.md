@@ -35,6 +35,10 @@ import { generateSlug } from '@mgamil/slug-generator';
 const randomId = generateSlug();
 console.log(randomId); // e.g. "aX9_z-pL"
 
+// Generate with a direct custom length (e.g. 12)
+const customLenId = generateSlug(12);
+console.log(customLenId); // e.g. "xQ9mZp2aKz1w"
+
 // Generate with prefix, suffix, and separator
 const prefixedId = generateSlug({
   length: 6,
