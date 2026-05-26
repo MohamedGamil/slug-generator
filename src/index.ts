@@ -35,6 +35,10 @@ export {
 } from './core/random.js';
 
 export {
+  Transliterator
+} from './core/transliterator.js'
+
+export {
   TextSlugifier
 } from './core/sanitize.js';
 
