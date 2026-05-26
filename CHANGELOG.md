@@ -2,6 +2,27 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.2.0] - 2026-05-26
+
+### Added
+- Flexible `options` parameter in `generateSlug(options)` supporting either a direct `number` (to set slug length) or a config object.
+- Modulo bias elimination in random slug generation using cryptographic rejection sampling.
+- Options `prefix`, `suffix`, and `separator` for random secure slug generation.
+- New asynchronous function `generateUniqueSlug(options)` with a required `exists` uniqueness check callback.
+- New options for `toSlug` / `slugify`:
+  - `lowercase` and `uppercase` for casing conversion.
+  - `preserveUnicode` to preserve non-ASCII letters and numbers in the slug.
+  - `transliterate` toggle to enable/disable phonetic transliteration.
+  - RegExp and string support for `allowedChars` custom allowed characters.
+  - `fallback` string to return on empty or too-short results.
+  - `trim` and `collapseSeparators` toggles.
+
+### Fixed
+- Fixed redundant console debug logs in `generateSlug` and `toSlug`.
+- Enhanced validation checks and regex range parsing.
+
+---
+
 ## [1.1.0] - 2026-05-26
 
 ### Added
