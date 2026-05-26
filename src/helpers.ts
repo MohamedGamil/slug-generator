@@ -107,6 +107,16 @@ export function obfuscate(counter: number | bigint, options?: ObfuscatedSequence
 }
 
 /**
+ * Decodes an obfuscated slug back into its original sequence counter value.
+ *
+ * @param slug - The scrambled slug to decode.
+ * @param options - Custom alphabet, minLength, multiplier, and modulo configurations.
+ */
+export function obfuscateDecode(slug: string, options?: ObfuscatedSequenceOptions): bigint {
+  return new ObfuscatedSequenceSlugGenerator(options).decode(slug);
+}
+
+/**
  * Generates a batch of unique random slugs in memory.
  *
  * @param count - The number of unique slugs to generate.

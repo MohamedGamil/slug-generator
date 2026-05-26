@@ -100,6 +100,7 @@ import {
   snowflake,
   snowflakeSlug,
   obfuscate,
+  obfuscateDecode,
   createSlugBatch
 } from '@mgamil/slug-generator';
 
@@ -114,6 +115,7 @@ const sfSlug = snowflakeSlug(); // "dI-8a"
 
 // 3. Counter Obfuscation Shorthand
 const scrambledSlug = obfuscate(1); // "dI-8aK"
+const originalCounter = obfuscateDecode(scrambledSlug); // 1n
 
 // 4. Batch Memory Pool Shorthand
 const batch = createSlugBatch(100, { length: 6 });
@@ -137,8 +139,12 @@ const generator = new ObfuscatedSequenceSlugGenerator({
 });
 
 // Always deterministic, guaranteed 100% collision-free
-console.log(generator.generate(1)); // "dI-8aK"
-console.log(generator.generate(2)); // "m82K_p"
+const slug = generator.generate(1); // "dI-8aK"
+console.log(slug);
+
+// Reverses the obfuscation back to the original value
+const original = generator.decode(slug); // 1n
+console.log(original);
 ```
 
 ### 2. UUID Slug Generator

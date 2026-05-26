@@ -12,7 +12,9 @@ All notable changes to the `@mgamil/slug-generator` package will be documented i
   - `snowflake(options)`: Shorthand for Snowflake decimal string generation.
   - `snowflakeSlug(options)`: Shorthand for Snowflake Base64 URL-safe slug generation.
   - `obfuscate(counter, options)`: Shorthand for scrambled Knuth-based sequence counter slug generation.
+  - `obfuscateDecode(slug, options)`: Shorthand for reversing obfuscated slugs back to counter values.
   - `createSlugBatch(count, options)`: Shorthand for generating a batch of unique slugs in memory.
+- Added `decode(slug)` method to `ObfuscatedSequenceSlugGenerator` to reverse the modular multiplicative hashing and recover the original sequence counter.
 - Documented all source files, classes, constructors, methods, and constants with detailed JSDoc comments.
 - Expanded unit test coverage in `src/unique.spec.ts` to cover error boundaries, constraint parameters, and new shorthand helpers.
 

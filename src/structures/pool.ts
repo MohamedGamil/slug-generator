@@ -99,12 +99,14 @@ export class ObfuscatedSequenceSlugGenerator {
   private minLength: number;
   private multiplier: bigint;
   private modulo: bigint;
+  private inverse: bigint;
+  private charIndexMap: Map<string, number>;
 
   /**
    * Initializes a new ObfuscatedSequenceSlugGenerator instance.
    *
    * @param options - Configuration options containing alphabet, minLength, multiplier, and modulo divisor.
-   * @throws Error if alphabet size, minLength, modulo, or multiplier values are invalid.
+   * @throws Error if alphabet size, minLength, modulo, or multiplier values are invalid, or if multiplier/modulo are not coprime.
    */
   constructor(options: ObfuscatedSequenceOptions = {}) {
     this.alphabet = options.alphabet ?? 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
@@ -126,6 +128,19 @@ export class ObfuscatedSequenceSlugGenerator {
     }
     if (this.multiplier <= 0n) {
       throw new Error('Multiplier must be positive.');
+    }
+
+    // Initialize character index map for fast reverse decoding lookup
+    this.charIndexMap = new Map<string, number>();
+    for (let i = 0; i < this.alphabet.length; i++) {
+      this.charIndexMap.set(this.alphabet[i], i);
+    }
+
+    // Compute the modular multiplicative inverse to enable decoding
+    try {
+      this.inverse = this.modularInverse(this.multiplier, this.modulo);
+    } catch {
+      throw new Error('Multiplier and Modulo must be coprime to support decoding.');
     }
   }
 
@@ -149,6 +164,22 @@ export class ObfuscatedSequenceSlugGenerator {
   }
 
   /**
+   * Decodes an obfuscated slug back into its original sequence counter value.
+   *
+   * @param slug - The scrambled slug to decode.
+   * @returns The original counter value as a BigInt.
+   * @throws Error if the slug is not a string, or contains characters outside the configured alphabet.
+   */
+  public decode(slug: string): bigint {
+    if (typeof slug !== 'string') {
+      throw new Error('Slug input must be a string.');
+    }
+    const scrambled = this.decodeBase(slug);
+    // Reverse the multiplication: (scrambled * inverse) % modulo
+    return (scrambled * this.inverse) % this.modulo;
+  }
+
+  /**
    * Encodes a bigint scrambled integer into base of alphabet length, left-padded to minLength.
    */
   private encodeBase(num: bigint): string {
@@ -166,5 +197,53 @@ export class ObfuscatedSequenceSlugGenerator {
     }
     
     return result.padStart(this.minLength, this.alphabet[0]);
+  }
+
+  /**
+   * Decodes an alphabet-encoded string back into its scrambled BigInt value.
+   */
+  private decodeBase(slug: string): bigint {
+    let num = 0n;
+    const base = BigInt(this.alphabet.length);
+    
+    for (let i = 0; i < slug.length; i++) {
+      const charIdx = this.charIndexMap.get(slug[i]);
+      if (charIdx === undefined) {
+        throw new Error(`Character '${slug[i]}' is not in the configured alphabet.`);
+      }
+      num = num * base + BigInt(charIdx);
+    }
+    return num;
+  }
+
+  /**
+   * Computes the modular multiplicative inverse of a modulo m using the Extended Euclidean Algorithm.
+   * Throws an error if they are not coprime.
+   */
+  private modularInverse(a: bigint, m: bigint): bigint {
+    let t = 0n;
+    let newT = 1n;
+    let r = m;
+    let newR = a;
+
+    while (newR !== 0n) {
+      const quotient = r / newR;
+      
+      const tempT = t;
+      t = newT;
+      newT = tempT - quotient * newT;
+
+      const tempR = r;
+      r = newR;
+      newR = tempR - quotient * newR;
+    }
+
+    if (r > 1n) {
+      throw new Error('a and m are not coprime');
+    }
+    if (t < 0n) {
+      t = t + m;
+    }
+    return t;
   }
 }

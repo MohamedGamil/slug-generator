@@ -109,6 +109,8 @@ Options for bijective scrambled counter slug generator:
   Initializes parameters and co-prime constants.
 * **`generate(counter: number | bigint): string`**
   Bijectively scrambles sequence counter to produce guaranteed unique and non-guessable URL slug.
+* **`decode(slug: string): bigint`**
+  Reverses the scrambled slug back to its original sequential counter value. Throws an error if the slug is invalid or contains characters not in the configured alphabet.
 
 ---
 
@@ -126,6 +128,8 @@ Options for bijective scrambled counter slug generator:
   Generates compact base64 URL-safe slug representation of Snowflake ID.
 * **`obfuscate(counter: number | bigint, options?: ObfuscatedSequenceOptions): string`**
   Maps sequential counter bijectively to unique scrambled URL slug.
+* **`obfuscateDecode(slug: string, options?: ObfuscatedSequenceOptions): bigint`**
+  Reverses an obfuscated slug back to its original counter value.
 * **`createSlugBatch(count: number, options?: GenerateSlugOptions | number): string[]`**
   Generates batch of unique random slugs in memory.
 

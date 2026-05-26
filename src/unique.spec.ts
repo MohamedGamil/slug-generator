@@ -12,6 +12,7 @@ import {
   snowflake,
   snowflakeSlug,
   obfuscate,
+  obfuscateDecode,
   createSlugBatch
 } from './index.js';
 
@@ -277,6 +278,27 @@ describe('New Unique Slug Generation Suite', () => {
       const generator = new ObfuscatedSequenceSlugGenerator();
       expect(() => generator.generate(-1)).toThrow('Counter must be a non-negative value.');
     });
+
+    it('should decode scrambled slugs back to their original counter values', () => {
+      const generator = new ObfuscatedSequenceSlugGenerator();
+      
+      const testCases = [0n, 1n, 42n, 123456n, 4294967295n];
+      for (const counter of testCases) {
+        const slug = generator.generate(counter);
+        const decoded = generator.decode(slug);
+        expect(decoded).toBe(counter);
+      }
+    });
+
+    it('should throw error when decoding invalid slugs', () => {
+      const generator = new ObfuscatedSequenceSlugGenerator();
+      expect(() => generator.decode(123 as any)).toThrow('Slug input must be a string.');
+      expect(() => generator.decode('invalid@slug')).toThrow("Character '@' is not in the configured alphabet.");
+    });
+
+    it('should throw error if multiplier and modulo are not coprime', () => {
+      expect(() => new ObfuscatedSequenceSlugGenerator({ multiplier: 2n, modulo: 4n })).toThrow(/coprime/);
+    });
   });
 
   describe('Shorthand Functional Helpers', () => {
@@ -299,6 +321,8 @@ describe('New Unique Slug Generation Suite', () => {
     it('should obfuscate sequential counters using shorthand function', () => {
       const slug = obfuscate(100);
       expect(slug).toHaveLength(6); // default minLength
+      const decoded = obfuscateDecode(slug);
+      expect(decoded).toBe(100n);
     });
 
     it('should generate unique batch of slugs using shorthand function', () => {

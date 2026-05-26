@@ -10,6 +10,7 @@ export {
   snowflake,
   snowflakeSlug,
   obfuscate,
+  obfuscateDecode,
   createSlugBatch
 } from './helpers.js';
 
