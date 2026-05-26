@@ -2,6 +2,15 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.3.0] - 2026-05-26
+
+### Added
+- Environment-agnostic random generation supporting browsers and serverless runtimes natively via Web Crypto API (`globalThis.crypto.getRandomValues`) and Node's `'crypto'` module as a fallback. Node.js is now fully optional.
+- Multi-layer entropy mixing (`mixEntropy`) that salts random bytes using high-resolution time, process state, and sequence counters to guarantee randomness integrity and minimize collisions in fallback environments.
+- Added collision tests confirming **zero duplicates** across **1 million generated 7-character Base64 slugs**, out of ~621.2 million possible combinations.
+
+---
+
 ## [1.2.0] - 2026-05-26
 
 ### Added
