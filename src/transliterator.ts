@@ -93,7 +93,12 @@ export class Transliterator {
    * @returns True if non-ASCII character is found.
    */
   public static hasNonAscii(text: string): boolean {
-    return /[^\u0000-\u007F]/.test(text);
+    for (let i = 0; i < text.length; i++) {
+      if (text.charCodeAt(i) > 127) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
