@@ -1,21 +1,22 @@
 # Slug Generator
 
-A powerful, light-weight utility package for generating random cryptographically secure slugs and sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints.
+A powerful, light-weight, zero-dependency utility package for generating random cryptographically secure slugs and sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints.
 
 ## Features
 
-- **Secure Slug Generation**: Create cryptographically secure random identifier strings using configurable character sets.
-- **Unicode-safe Text Sanitization**: Normalize and convert arbitrary strings into URL-safe slugs with accented characters properly decomposed.
-- **Phonetic Transliteration**: Convert non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul) to their phonetic spoken ASCII equivalents, avoiding empty slugs or validation exceptions for non-Latin inputs.
-- **Configurable Casing**: Convert to lowercase by default, or preserve the original casing options.
-- **Configurable Spacing**: Replace spaces with the separator by default (`preserveSpace: false`), or leave space characters intact in the sanitized slug (`preserveSpace: true`).
-- **Custom Separators**: Use a custom single-character URL-safe separator (e.g. `'_'`, defaults to `'-'`).
-- **Strict Configuration Boundaries**: Robust checks against floating-point values and invalid limits configuration.
+- **Secure Slug Generation**: Create cryptographically secure random identifier strings using a bias-free selection algorithm.
+- **Unique Slug Generation**: Generate unique slugs asynchronously using a customizable uniqueness validation callback.
+- **Prefix, Suffix & Separators**: Configure prefix, suffix, and custom separators for generated random slugs.
+- **Unicode-safe Text Sanitization**: Normalize and convert arbitrary strings into URL-safe slugs with accented characters properly handled.
+- **Preserve Unicode**: Option to keep non-ASCII Unicode letters and numbers in the sanitized slug.
+- **Phonetic Transliteration**: Convert non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul) to their phonetic spoken ASCII equivalents.
+- **Casing Controls**: Toggle lowercase, uppercase, or preserve casing.
+- **Regex & String Allowed Characters**: Pass custom allowed characters via literal strings or regular expressions.
+- **Output Control Options**: Manage fallback values for empty results, disable separator/space trimming, and configure consecutive separator collapsing.
+- **Strict Configuration Boundaries**: Robust checks against invalid settings, floating-point parameters, and non-URL-safe parameters.
 - **Modern Module Resolution**: Fully supports ESM imports and typed exports natively.
 
 ## Installation
-
-Within the monorepo or standard NPM projects:
 
 ```bash
 pnpm add @mgamil/slug-generator
@@ -30,42 +31,57 @@ npm install @mgamil/slug-generator
 ```typescript
 import { generateSlug } from '@mgamil/slug-generator';
 
-// Generates a random secure slug (default length: 8)
+// Generates a random secure slug (default length: 8, bias-free)
 const randomId = generateSlug();
 console.log(randomId); // e.g. "aX9_z-pL"
 
-// Custom length and limits
-const customId = generateSlug({
-  length: 12,
-  minLength: 8,
-  maxLength: 16
+// Generate with prefix, suffix, and separator
+const prefixedId = generateSlug({
+  length: 6,
+  prefix: 'invite',
+  suffix: 'promo',
+  separator: '_'
+});
+console.log(prefixedId); // e.g. "invite_K9xP2m_promo"
+```
+
+### 2. Generating Unique Slugs
+
+```typescript
+import { generateUniqueSlug } from '@mgamil/slug-generator';
+
+const slug = await generateUniqueSlug({
+  length: 10,
+  exists: async (val) => {
+    // Check in database
+    return await db.posts.exists({ where: { slug: val } });
+  }
 });
 ```
 
-### 2. Sanitizing Text to Slugs
+### 3. Sanitizing Text to Slugs
 
 ```typescript
 import { toSlug, slugify } from '@mgamil/slug-generator';
 
-// Standard sanitization (spaces replaced by separator by default)
+// Standard sanitization
 const slug = toSlug('Hello World! 🌟');
 console.log(slug); // "hello-world"
 
-// Preserving space characters intact
-const slugWithSpaces = toSlug('Hello World!', { preserveSpace: true });
-console.log(slugWithSpaces); // "hello world"
+// Preserving Unicode characters (letters and numbers)
+const unicodeSlug = toSlug('Café déjà vu مرحبا', { preserveUnicode: true });
+console.log(unicodeSlug); // "café-déjà-vu-مرحبا"
 
-// Custom separators & preserved casing
-const camelSlug = slugify('Hello World!', {
-  preserveCase: true,
-  preserveSpace: false,
-  separator: '_'
+// Custom Casing and Regular Expression Allowed Characters
+const customSlug = toSlug('product.code#1234', {
+  uppercase: true,
+  allowedChars: /[.#]/
 });
-console.log(camelSlug); // "Hello_World"
+console.log(customSlug); // "PRODUCT.CODE#1234"
 
-// Phonetic Transliteration of non-Latin scripts (Arabic, Hebrew, Cyrillic, Chinese, etc.)
-const nonLatinSlug = toSlug('مرحبا hello שָׁלוֹם');
-console.log(nonLatinSlug); // "mrhba-hello-shalom"
+// Fallback for empty results
+const emptySlug = toSlug('!!!@@@', { fallback: 'untitled' });
+console.log(emptySlug); // "untitled"
 ```
 
 ## Documentation
@@ -75,4 +91,3 @@ For full details on options, signatures, validation exceptions, and edge-cases, 
 ## License
 
 Apache-2.0
-

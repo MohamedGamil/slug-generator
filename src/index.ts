@@ -24,6 +24,18 @@ export interface GenerateSlugOptions {
    * The maximum allowable generated slug length configuration boundary. Defaults to `64`. Must be <= 64.
    */
   maxLength?: number;
+  /**
+   * Optional fixed prefix to prepend to the slug.
+   */
+  prefix?: string;
+  /**
+   * Optional fixed suffix to append to the slug.
+   */
+  suffix?: string;
+  /**
+   * Separator character between prefix/suffix and the random part. Defaults to no separator if not provided. Must be exactly 1 character and belong to `a-zA-Z0-9-_.~`.
+   */
+  separator?: string;
 }
 
 /**
@@ -33,8 +45,8 @@ export interface GenerateSlugOptions {
  * @returns A cryptographically secure random slug.
  * @throws An error if length limits are breached or inputs are invalid.
  */
-export function generateSlug(options: GenerateSlugOptions = {}): string {
-  const opts = options ?? {};
+export function generateSlug(options: GenerateSlugOptions | number = {}): string {
+  const opts = typeof options === 'number' ? { length: options } : (options ?? {});
   const length = opts.length ?? 8;
   const alphabet = opts.alphabet ?? DEFAULT_ALPHABET;
   const minLength = opts.minLength ?? 5;
@@ -68,16 +80,111 @@ export function generateSlug(options: GenerateSlugOptions = {}): string {
     throw new Error(`Slug length must be between ${minLength} and ${maxLength} characters.`);
   }
 
-  let slug = '';
-  const alphabetLength = alphabet.length;
-  
-  // Use cryptographically secure random bytes to avoid collisions
-  const bytes = randomBytes(length);
-  for (let i = 0; i < length; i++) {
-    slug += alphabet[bytes[i] % alphabetLength];
+  if (opts.prefix !== undefined) {
+    if (typeof opts.prefix !== 'string') {
+      throw new Error('Prefix option must be a string.');
+    }
+    for (const char of opts.prefix) {
+      if (!URL_SAFE_CHARACTERS.has(char)) {
+        throw new Error(`Prefix character '${char}' is not URL safe.`);
+      }
+    }
   }
 
-  return slug;
+  if (opts.suffix !== undefined) {
+    if (typeof opts.suffix !== 'string') {
+      throw new Error('Suffix option must be a string.');
+    }
+    for (const char of opts.suffix) {
+      if (!URL_SAFE_CHARACTERS.has(char)) {
+        throw new Error(`Suffix character '${char}' is not URL safe.`);
+      }
+    }
+  }
+
+  if (opts.separator !== undefined) {
+    if (typeof opts.separator !== 'string') {
+      throw new Error('Separator option must be a string.');
+    }
+    if (opts.separator.length !== 1) {
+      throw new Error('Separator must be exactly 1 character long.');
+    }
+    if (!URL_SAFE_CHARACTERS.has(opts.separator)) {
+      throw new Error(`Separator character '${opts.separator}' is not URL safe.`);
+    }
+  }
+
+  let randomPart = '';
+  const alphabetLength = alphabet.length;
+  const limit = 256 - (256 % alphabetLength);
+  
+  // Use cryptographically secure random bytes with rejection sampling to avoid modulo bias
+  while (randomPart.length < length) {
+    const bytesNeeded = Math.max(length - randomPart.length, 10);
+    const bytes = randomBytes(bytesNeeded);
+    for (let i = 0; i < bytes.length && randomPart.length < length; i++) {
+      if (bytes[i] < limit) {
+        randomPart += alphabet[bytes[i] % alphabetLength];
+      }
+    }
+  }
+
+  const parts: string[] = [];
+  if (opts.prefix) {
+    parts.push(opts.prefix);
+  }
+  parts.push(randomPart);
+  if (opts.suffix) {
+    parts.push(opts.suffix);
+  }
+
+  return parts.join(opts.separator ?? '');
+}
+
+/**
+ * Options configuration for generating unique secure slugs.
+ */
+export interface GenerateUniqueSlugOptions extends GenerateSlugOptions {
+  /**
+   * Validation function to check if the generated slug already exists.
+   * Must return `true` if the slug exists (is taken) and `false` if it is unique.
+   */
+  exists: (slug: string) => boolean | Promise<boolean>;
+  /**
+   * Maximum number of attempts to generate a unique slug before throwing an error. Defaults to `100`.
+   */
+  maxRetries?: number;
+}
+
+/**
+ * Generates a unique cryptographically secure random slug.
+ *
+ * @param options - Configuration options extending GenerateSlugOptions, including the exists check.
+ * @returns A promise resolving to a unique cryptographically secure random slug.
+ * @throws An error if a unique slug cannot be generated within maxRetries attempts or if exists is missing.
+ */
+export async function generateUniqueSlug(options: GenerateUniqueSlugOptions): Promise<string> {
+  if (!options) {
+    throw new Error('Options object is required.');
+  }
+  if (typeof options.exists !== 'function') {
+    throw new Error('exists option is required and must be a function.');
+  }
+
+  const maxRetries = options.maxRetries ?? 100;
+  if (!Number.isInteger(maxRetries) || maxRetries <= 0) {
+    throw new Error('maxRetries must be a positive integer.');
+  }
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const slug = generateSlug(options);
+    const taken = await options.exists(slug);
+    if (!taken) {
+      return slug;
+    }
+  }
+
+  throw new Error(`Failed to generate a unique slug after ${maxRetries} attempts.`);
 }
 
 /**
@@ -108,6 +215,38 @@ export interface ToSlugOptions {
    * A string containing custom allowed characters to preserve in the sanitized slug. Must only contain URL-safe characters (`a-zA-Z0-9-_.~`).
    */
   allowedCharacters?: string;
+  /**
+   * If true, converts the output to lowercase. Defaults to true if not specified.
+   */
+  lowercase?: boolean;
+  /**
+   * If true, converts the output to uppercase. Defaults to false.
+   */
+  uppercase?: boolean;
+  /**
+   * If true, preserves Unicode letters and numbers instead of converting to ASCII. Defaults to false.
+   */
+  preserveUnicode?: boolean;
+  /**
+   * If true, converts non-Latin scripts to ASCII phonetic equivalents. Defaults to true.
+   */
+  transliterate?: boolean;
+  /**
+   * Custom characters (either string or RegExp) allowed to remain in the sanitized slug.
+   */
+  allowedChars?: RegExp | string;
+  /**
+   * A fallback string value to return if the sanitized slug is empty or too short. Set this option value to `%AUTO%` to generate a random 8 characters long slug.
+   */
+  fallback?: string;
+  /**
+   * If true, trims leading and trailing separators. Defaults to true.
+   */
+  trim?: boolean;
+  /**
+   * If true, collapses multiple consecutive separators. Defaults to true.
+   */
+  collapseSeparators?: boolean;
 }
 
 /**
@@ -145,12 +284,21 @@ export function toSlug(text: string, options: ToSlugOptions = {}): string {
     throw new Error('Allowed characters option must be a string.');
   }
 
-  if (typeof opts.allowedCharacters === 'string') {
-    for (const char of opts.allowedCharacters) {
+  if (opts.allowedChars !== undefined && typeof opts.allowedChars !== 'string' && !(opts.allowedChars instanceof RegExp)) {
+    throw new Error('Allowed characters option must be a string or RegExp.');
+  }
+
+  const allowedCharsOption = opts.allowedChars !== undefined ? opts.allowedChars : opts.allowedCharacters;
+  if (typeof allowedCharsOption === 'string') {
+    for (const char of allowedCharsOption) {
       if (!URL_SAFE_CHARACTERS.has(char)) {
         throw new Error(`Allowed character '${char}' is not URL safe.`);
       }
     }
+  }
+
+  if (opts.lowercase === true && opts.uppercase === true) {
+    throw new Error('Cannot set both lowercase and uppercase to true.');
   }
 
   if (!Number.isInteger(minLength)) {
@@ -173,37 +321,72 @@ export function toSlug(text: string, options: ToSlugOptions = {}): string {
   let sanitized = text;
 
   // Transliterate non-Latin scripts to their phonetic ASCII equivalents before normalization
-  if (Transliterator.hasNonAscii(sanitized)) {
+  const shouldTransliterate = opts.transliterate !== false && !opts.preserveUnicode;
+  if (shouldTransliterate && Transliterator.hasNonAscii(sanitized)) {
     sanitized = Transliterator.transliterate(sanitized);
   }
 
-  // Normalize to decompose accents (e.g. é -> e)
-  sanitized = sanitized
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  // Normalize to decompose accents (e.g. é -> e) unless preserving Unicode
+  if (opts.preserveUnicode) {
+    sanitized = sanitized.normalize('NFC');
+  } else {
+    sanitized = sanitized
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
 
-  if (!opts.preserveCase) {
+  // Apply Casing options
+  let targetCase: 'lower' | 'upper' | 'preserve' = 'lower';
+  if (opts.preserveCase || opts.lowercase === false) {
+    targetCase = 'preserve';
+  } else if (opts.uppercase === true) {
+    targetCase = 'upper';
+  }
+
+  if (targetCase === 'lower') {
     sanitized = sanitized.toLowerCase();
+  } else if (targetCase === 'upper') {
+    sanitized = sanitized.toUpperCase();
   }
 
-  // Replace characters other than alphanumeric, whitespace, hyphens, underscores, and custom allowed characters
-  let allowedPattern = 'a-zA-Z0-9\\s-_';
-  if (typeof opts.allowedCharacters === 'string') {
-    const escapedCustom = opts.allowedCharacters.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    allowedPattern += escapedCustom;
+  // Filter allowed characters
+  if (allowedCharsOption instanceof RegExp) {
+    const testRegex = new RegExp(allowedCharsOption.source, allowedCharsOption.flags.replace('g', ''));
+    const defaultPattern = opts.preserveUnicode ? /[\p{L}\p{N}\s\-_]/u : /[a-zA-Z0-9\s\-_]/;
+    sanitized = Array.from(sanitized)
+      .filter(char => defaultPattern.test(char) || testRegex.test(char))
+      .join('');
+  } else {
+    let allowedPattern: string;
+    const escapedCustom = typeof allowedCharsOption === 'string'
+      ? allowedCharsOption.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      : '';
+
+    if (opts.preserveUnicode) {
+      allowedPattern = `\\p{L}\\p{N}\\s\\-_${escapedCustom}`;
+      const sanitizationRegex = new RegExp(`[^${allowedPattern}]`, 'gu');
+      sanitized = sanitized.replace(sanitizationRegex, '');
+    } else {
+      allowedPattern = `a-zA-Z0-9\\s\\-_${escapedCustom}`;
+      const sanitizationRegex = new RegExp(`[^${allowedPattern}]`, 'g');
+      sanitized = sanitized.replace(sanitizationRegex, '');
+    }
   }
-  const sanitizationRegex = new RegExp(`[^${allowedPattern}]`, 'g');
-  sanitized = sanitized.replace(sanitizationRegex, '');
 
   // Handle spacing and replacement
   if (opts.preserveSpace) {
-    // Replace non-space whitespace, hyphens, and underscores with the specified separator
-    sanitized = sanitized.replace(/[^\S ]+|[-_]+/g, separator);
-    // Collapse consecutive spaces to a single space
-    sanitized = sanitized.replace(/ +/g, ' ');
+    if (opts.collapseSeparators !== false) {
+      sanitized = sanitized.replace(/[^\S ]+|[-_]+/g, separator);
+      sanitized = sanitized.replace(/ +/g, ' ');
+    } else {
+      sanitized = sanitized.replace(/[^\S ]/g, separator).replace(/[-_]/g, separator);
+    }
   } else {
-    // Replace all whitespace, hyphens, and underscores with the specified separator
-    sanitized = sanitized.replace(/[\s-_]+/g, separator);
+    if (opts.collapseSeparators !== false) {
+      sanitized = sanitized.replace(/[\s\-_]+/g, separator);
+    } else {
+      sanitized = sanitized.replace(/[\s\-_]/g, separator);
+    }
   }
 
   // Trim leading/trailing separators and spaces (if preserveSpace is true)
@@ -219,23 +402,26 @@ export function toSlug(text: string, options: ToSlugOptions = {}): string {
     ? new RegExp(`^(?:${trimParts.join('|')})+|(?:${trimParts.join('|')})+$`, 'g')
     : null;
 
-  if (trimRegExp) {
+  if (trimRegExp && opts.trim !== false) {
     sanitized = sanitized.replace(trimRegExp, '');
   }
 
   // Truncate to maximum length limit
   if (sanitized.length > maxLength) {
     sanitized = sanitized.slice(0, maxLength);
-    if (trimRegExp) {
+    if (trimRegExp && opts.trim !== false) {
       sanitized = sanitized.replace(trimRegExp, '');
     }
   }
 
   if (sanitized.length < minLength) {
+    if (opts.fallback !== undefined) {
+      return String(opts.fallback ?? '').trim().toUpperCase() === '%AUTO%'
+        ? generateSlug()
+        : opts.fallback;
+    }
     throw new Error(`Sanitized slug length (${sanitized.length}) is less than minimum required length (${minLength}).`);
   }
-
-  // console.log(text, sanitized);
 
   return sanitized;
 }

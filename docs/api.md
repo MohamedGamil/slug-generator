@@ -7,14 +7,17 @@ This document contains a detailed specification of the types, functions, configu
 ## Functions
 
 ### `generateSlug(options?: GenerateSlugOptions): string`
-Generates a cryptographically secure random slug.
+Generates a cryptographically secure random slug using a bias-free selection algorithm.
 
 #### Options (`GenerateSlugOptions`)
 All options are optional:
-* **`length`** (`number`): The target length of the generated slug. Defaults to `8`.
-* **`alphabet`** (`string`): The set of allowed characters for the slug. Defaults to a standard alphanumeric-hyphen-underscore set: `A-Z`, `a-z`, `0-9`, `-`, `_`.
-* **`minLength`** (`number`): Configures the minimum allowable generated length limit. Defaults to `5`. Must be an integer >= 2.
-* **`maxLength`** (`number`): Configures the maximum allowable generated length limit. Defaults to `64`. Must be an integer <= 64.
+* **`length`** (`number`): The target length of the generated random part. Defaults to `8`.
+* **`alphabet`** (`string`): The set of allowed characters for the random part. Defaults to a standard alphanumeric-hyphen-underscore set: `A-Z`, `a-z`, `0-9`, `-`, `_`.
+* **`minLength`** (`number`): Configures the minimum allowable generated random length limit. Defaults to `5`. Must be an integer >= 2.
+* **`maxLength`** (`number`): Configures the maximum allowable generated random length limit. Defaults to `64`. Must be an integer <= 64.
+* **`prefix`** (`string`): An optional fixed prefix prepended to the generated slug.
+* **`suffix`** (`string`): An optional fixed suffix appended to the generated slug.
+* **`separator`** (`string`): Separator character between the prefix/suffix and the random part. Defaults to no separator. Must be exactly 1 character and belong to `a-zA-Z0-9-_.~`.
 
 #### Exceptions
 Throws an `Error` if:
@@ -24,105 +27,105 @@ Throws an `Error` if:
 * Configured `maxLength` exceeds `64`.
 * Configured `minLength` is greater than `maxLength`.
 * Requested `length` is outside the range defined by `[minLength, maxLength]`.
+* `prefix` or `suffix` is specified but is not a string, or contains characters that are not URL-safe.
+* `separator` is specified but is not exactly 1 character or is not URL-safe.
+
+---
+
+### `generateUniqueSlug(options: GenerateUniqueSlugOptions): Promise<string>`
+Generates a unique cryptographically secure random slug. It iteratively calls `generateSlug` and checks uniqueness using a custom callback.
+
+#### Options (`GenerateUniqueSlugOptions`)
+Extends `GenerateSlugOptions` and adds:
+* **`exists`** (`(slug: string) => boolean | Promise<boolean>`): **[Required]** Callback function that resolves to `true` if the slug is already taken (exists) and `false` if it is unique.
+* **`maxRetries`** (`number`): Maximum number of attempts to generate a unique slug before throwing an error. Defaults to `100`. Must be a positive integer.
+
+#### Exceptions
+Throws an `Error` if:
+* Options object is missing.
+* `exists` callback is missing or is not a function.
+* `maxRetries` is not a positive integer.
+* A unique slug cannot be generated after `maxRetries` attempts.
+* Any parameters fail `generateSlug` validation.
 
 ---
 
 ### `toSlug(text: string, options?: ToSlugOptions): string`
-Sanitizes arbitrary UTF-8 text into a URL-friendly slug. Alias: `slugify`.
+Sanitized arbitrary UTF-8 text into a URL-friendly slug. Alias: `slugify`.
 
 #### Options (`ToSlugOptions`)
 All options are optional:
-* **`preserveCase`** (`boolean`): If `true`, preserves the original case of characters. If `false` (default), lowercases all characters.
+* **`preserveCase`** (`boolean`): If `true`, preserves the original case of characters.
+* **`lowercase`** (`boolean`): If `true`, converts the output to lowercase (default behavior if casing options are unspecified).
+* **`uppercase`** (`boolean`): If `true`, converts the output to uppercase.
 * **`preserveSpace`** (`boolean`): If `true`, spaces are preserved as space characters `" "` (consecutive spaces collapsed, leading/trailing trimmed). If `false` (default), all spaces are replaced by the `separator` character.
+* **`preserveUnicode`** (`boolean`): If `true`, preserves non-ASCII Unicode letters and numbers in the output. Skips phonetic transliteration and accent decomposition.
+* **`transliterate`** (`boolean`): If `true` (default), automatically converts non-Latin scripts (Cyrillic, Arabic, Hebrew, Chinese, Japanese, Korean, Greek) to ASCII phonetic equivalents.
 * **`minLength`** (`number`): Configures the minimum allowable sanitized length. Defaults to `1`. Must be an integer >= 1.
 * **`maxLength`** (`number`): Configures the maximum allowable sanitized length. Defaults to `128`. Must be an integer <= 128.
-* **`separator`** (`string`): A single custom character used to replace spaces when `preserveSpace` is `false` (or other whitespace/hyphens/underscores when `preserveSpace` is `true`). Defaults to `'-'`. Must be exactly 1 character long and must be a URL-safe character (`a-zA-Z0-9-_.~`).
-* **`allowedCharacters`** (`string`): A string containing custom characters that are allowed to remain in the sanitized slug. Only characters from the predefined URL-safe set (`a-zA-Z0-9-_.~`) are allowed.
+* **`separator`** (`string`): A single custom character used to replace spaces when `preserveSpace` is `false`. Defaults to `'-'`. Must be exactly 1 character long and must be a URL-safe character (`a-zA-Z0-9-_.~`).
+* **`allowedCharacters`** (`string`): A string containing custom characters allowed to remain in the sanitized slug. Only characters from the predefined URL-safe set (`a-zA-Z0-9-_.~`) are allowed.
+* **`allowedChars`** (`RegExp | string`): Superset/alias of `allowedCharacters`. Accepts a string of allowed characters, or a regular expression representing custom allowed characters.
+* **`fallback`** (`string`): A fallback string value returned if the sanitized slug is empty or shorter than `minLength` (e.g. if input contains only stripped emojis/symbols).
+* **`trim`** (`boolean`): If `true` (default), trims leading and trailing separators and spaces.
+* **`collapseSeparators`** (`boolean`): If `true` (default), collapses multiple consecutive separators.
 
 #### Exception/Trimming Flow
-1. Validates options parameters and throws immediate exceptions if `text` is not a string, or if configured bounds/types (`minLength`, `maxLength`, `separator`, `allowedCharacters`) are invalid or not URL-safe.
-2. Identifies if the input contains non-ASCII characters and transliterates supported non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul syllables) into their phonetic ASCII equivalents.
-3. Normalizes the string and decomposes accents (e.g., `é` -> `e`).
-4. Converts the string to lowercase (unless `preserveCase` is set to `true`).
-5. Strips any character from the text that is not alphanumeric, a space, hyphen, underscore, or in `allowedCharacters`.
-6. Handles spacing:
-   - If `preserveSpace` is `true`: replaces tabs/newlines/hyphens/underscores with `separator`, then collapses consecutive spaces.
-   - If `preserveSpace` is `false` (default): replaces all spaces/whitespace/hyphens/underscores with `separator`.
-7. Trims leading and trailing occurrences of the `separator` and space characters (if `preserveSpace` is `true`).
-8. If the length exceeds `maxLength`, slices the string to `maxLength` and re-trims trailing separators/spaces.
-9. Throws an `Error` if the final slug length is less than `minLength`.
-
-#### Exceptions
-Throws an `Error` if:
-* `text` is not a string.
-* `minLength` or `maxLength` are not integers.
-* Configured `minLength` is less than `1`.
-* Configured `maxLength` exceeds `128`.
-* Configured `minLength` is greater than `maxLength`.
-* `separator` is specified but is not a string of length exactly 1.
-* `separator` is specified but is not a URL-safe character (`a-zA-Z0-9-_.~`).
-* `allowedCharacters` is specified but is not a string.
-* Any character in `allowedCharacters` is not URL-safe (`a-zA-Z0-9-_.~`).
-* The final sanitized slug is shorter than `minLength` (e.g., if input text has only accents/emojis and spaces).
+1. Validates options parameters and throws immediate exceptions if bounds, types, or separators are invalid.
+2. If `lowercase` and `uppercase` are both set to `true`, throws a casing conflict exception.
+3. Transliterates supported non-Latin scripts to phonetic ASCII equivalents (unless `transliterate` is set to `false` or `preserveUnicode` is `true`).
+4. Performs Unicode normalization:
+   - NFC normalization if `preserveUnicode` is `true`.
+   - NFD normalization + accent stripping if `preserveUnicode` is `false`.
+5. Adjusts casing based on `preserveCase`, `lowercase`, and `uppercase` settings.
+6. Filters characters keeping only alphanumeric (ASCII-only or Unicode depending on `preserveUnicode`), spaces, hyphens, underscores, and characters matching `allowedChars`/`allowedCharacters`.
+7. Replaces whitespace/hyphens/underscores with `separator` (unless `preserveSpace` is `true`). Collapses consecutive separators if `collapseSeparators` is `true`.
+8. Trims leading/trailing separators and spaces (unless `trim` is `false`).
+9. Truncates to `maxLength`.
+10. Checks `minLength`. If too short, returns `fallback` if provided; otherwise, throws an `Error`.
 
 ---
 
 ## Examples
 
-### Custom Validation Limits for Random Slugs
+### Generating Unique Slugs in Database
+```typescript
+import { generateUniqueSlug } from '@mgamil/slug-generator';
+
+const slug = await generateUniqueSlug({
+  length: 12,
+  exists: async (newSlug) => {
+    const count = await db.users.count({ where: { referralSlug: newSlug } });
+    return count > 0;
+  }
+});
+```
+
+### Prefix, Suffix, and Separator for Random Slugs
 ```typescript
 import { generateSlug } from '@mgamil/slug-generator';
 
-// This configuration extends bounds down to 3 characters
-const shortSlug = generateSlug({
-  length: 3,
-  minLength: 2,
-  maxLength: 10
+const code = generateSlug({
+  length: 6,
+  prefix: 'REF',
+  suffix: '2026',
+  separator: '_'
 });
-console.log(shortSlug); // e.g. "a3_"
+console.log(code); // e.g. "REF_aK92mz_2026"
 ```
 
-### Custom Allowed Characters in Sanitization
+### Preserving Unicode Characters
 ```typescript
 import { toSlug } from '@mgamil/slug-generator';
 
-// Allow dot and tilde in the output slug
-const slug = toSlug('hello.world~', {
-  allowedCharacters: '.~'
-});
-console.log(slug); // "hello-world~" (space replaced by default separator '-', dot/tilde preserved)
+const slug = toSlug('Café au lait & مرحبا', { preserveUnicode: true });
+console.log(slug); // "café-au-lait-مرحبا"
 ```
 
-### Space Preservation in Sanitization
+### Regular Expression Allowed Characters
 ```typescript
 import { toSlug } from '@mgamil/slug-generator';
 
-// Default preserveSpace = false: spaces replaced by separator '-'
-const slug = toSlug('Café ☕️ Time');
-console.log(slug); // "cafe-time"
-
-// preserveSpace = true: spaces left as actual space characters
-const slugWithSpace = toSlug('Café ☕️ Time', { preserveSpace: true });
-console.log(slugWithSpace); // "cafe time"
+const slug = toSlug('v1.0.0-beta.2', { allowedChars: /[.]/ });
+console.log(slug); // "v1.0.0-beta.2"
 ```
-
-### Phonetic Transliteration of non-Latin Scripts
-```typescript
-import { toSlug } from '@mgamil/slug-generator';
-
-// Cyrillic script
-console.log(toSlug('привет')); // "privet"
-
-// Arabic script
-console.log(toSlug('مرحبا')); // "mrhba"
-
-// Chinese Hanzi
-console.log(toSlug('你好')); // "nihao"
-
-// Japanese Hiragana
-console.log(toSlug('こんにちは')); // "konnichiha"
-
-// Korean Hangul syllables
-console.log(toSlug('안녕하세요')); // "annyeonghaseyo"
-```
-

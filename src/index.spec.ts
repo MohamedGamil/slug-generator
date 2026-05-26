@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSlug, toSlug, slugify } from './index';
+import { generateSlug, toSlug, slugify, generateUniqueSlug } from './index';
 
 describe('slug-generator', () => {
   it('should generate a slug with default length 8', () => {
@@ -7,9 +7,20 @@ describe('slug-generator', () => {
     expect(slug).toHaveLength(8);
   });
 
-  it('should generate a slug with custom length', () => {
+  it('should generate a slug with custom length options', () => {
     const slug = generateSlug({ length: 12 });
     expect(slug).toHaveLength(12);
+  });
+
+  it('should generate a slug when passed a number as options', () => {
+    const slug1 = generateSlug(10);
+    expect(slug1).toHaveLength(10);
+
+    const slug2 = generateSlug(6);
+    expect(slug2).toHaveLength(6);
+
+    expect(() => generateSlug(4)).toThrow('Slug length must be between 5 and 64 characters.');
+    expect(() => generateSlug(65)).toThrow('Slug length must be between 5 and 64 characters.');
   });
 
   it('should only use characters from the specified alphabet', () => {
@@ -175,6 +186,125 @@ describe('slug-generator', () => {
       expect(slugify('Hello World!')).toBe('hello-world');
       expect(slugify('Hello World!', { preserveSpace: true })).toBe('hello world');
       expect(slugify('Hello World!', { preserveCase: true, preserveSpace: false, separator: '_' })).toBe('Hello_World');
+    });
+
+    describe('new sanitization options', () => {
+      it('should handle lowercase and uppercase options', () => {
+        expect(toSlug('Hello World', { lowercase: true })).toBe('hello-world');
+        expect(toSlug('Hello World', { lowercase: false })).toBe('Hello-World');
+        expect(toSlug('Hello World', { uppercase: true })).toBe('HELLO-WORLD');
+        expect(() => toSlug('Hello World', { lowercase: true, uppercase: true })).toThrow('Cannot set both lowercase and uppercase to true.');
+      });
+
+      it('should handle preserveUnicode option', () => {
+        // preserveUnicode = true: keeps Unicode letters/numbers as-is and skips transliteration
+        expect(toSlug('مرحبا hello 123!', { preserveUnicode: true })).toBe('مرحبا-hello-123');
+        expect(toSlug('안녕하세요 world!', { preserveUnicode: true })).toBe('안녕하세요-world');
+        expect(toSlug('Café déjà vu!', { preserveUnicode: true })).toBe('café-déjà-vu');
+      });
+
+      it('should handle transliterate option', () => {
+        // transliterate = false: disables translit, so Arabic characters (non-ASCII) will be stripped if preserveUnicode = false
+        expect(toSlug('مرحبا hello', { transliterate: false })).toBe('hello');
+      });
+
+      it('should handle allowedChars option as string and RegExp', () => {
+        expect(toSlug('hello @ world! ☕️', { allowedChars: '.', preserveSpace: true })).toBe('hello world');
+        expect(toSlug('hello.world~', { allowedChars: /[.~]/ })).toBe('hello.world~');
+        expect(toSlug('product-code-1234', { allowedChars: /[0-9]/ })).toBe('product-code-1234');
+        expect(() => toSlug('hello', { allowedChars: 123 as any })).toThrow('Allowed characters option must be a string or RegExp.');
+      });
+
+      it('should return fallback value if sanitized slug is empty or too short', () => {
+        expect(toSlug('!!!', { fallback: 'untitled' })).toBe('untitled');
+        expect(toSlug('', { fallback: 'default-slug' })).toBe('default-slug');
+        expect(toSlug('a', { minLength: 5, fallback: 'long-fallback' })).toBe('long-fallback');
+      });
+
+      it('should respect trim: false option', () => {
+        expect(toSlug(' hello world ', { trim: false })).toBe('-hello-world-');
+        expect(toSlug('-hello-world-', { trim: false })).toBe('-hello-world-');
+        expect(toSlug('hello', { separator: '_', trim: false })).toBe('hello');
+      });
+
+      it('should respect collapseSeparators: false option', () => {
+        expect(toSlug('hello   world', { collapseSeparators: false })).toBe('hello---world');
+        expect(toSlug('hello---world', { collapseSeparators: false })).toBe('hello---world');
+        expect(toSlug('hello  world', { preserveSpace: true, collapseSeparators: false })).toBe('hello  world');
+      });
+    });
+
+    describe('generateSlug prefix, suffix, and separator options', () => {
+      it('should support prefix option', () => {
+        const slug = generateSlug({ length: 8, prefix: 'user' });
+        expect(slug.startsWith('user')).toBe(true);
+        expect(slug).toHaveLength(12); // "user" (4) + random (8)
+      });
+
+      it('should support suffix option', () => {
+        const slug = generateSlug({ length: 8, suffix: 'end' });
+        expect(slug.endsWith('end')).toBe(true);
+        expect(slug).toHaveLength(11); // random (8) + "end" (3)
+      });
+
+      it('should support separator option with prefix and suffix', () => {
+        const slug = generateSlug({ length: 8, prefix: 'user', suffix: 'end', separator: '-' });
+        expect(slug.startsWith('user-')).toBe(true);
+        expect(slug.endsWith('-end')).toBe(true);
+        expect(slug).toHaveLength(17); // "user-" (5) + random (8) + "-end" (4)
+      });
+
+      it('should throw for invalid prefix, suffix, or separator', () => {
+        expect(() => generateSlug({ prefix: 123 as any })).toThrow('Prefix option must be a string.');
+        expect(() => generateSlug({ prefix: 'user@' })).toThrow("Prefix character '@' is not URL safe.");
+        expect(() => generateSlug({ suffix: 123 as any })).toThrow('Suffix option must be a string.');
+        expect(() => generateSlug({ suffix: 'end!' })).toThrow("Suffix character '!' is not URL safe.");
+        expect(() => generateSlug({ separator: 123 as any })).toThrow('Separator option must be a string.');
+        expect(() => generateSlug({ separator: 'abc' })).toThrow('Separator must be exactly 1 character long.');
+        expect(() => generateSlug({ separator: '@' })).toThrow("Separator character '@' is not URL safe.");
+      });
+    });
+
+    describe('generateUniqueSlug', () => {
+      it('should generate a unique slug using sync exists check', async () => {
+        const existing = ['abc', 'def'];
+        const unique = await generateUniqueSlug({
+          length: 3,
+          minLength: 3,
+          alphabet: 'abcdef',
+          exists: (slug) => existing.includes(slug),
+          maxRetries: 10
+        });
+        expect(existing).not.toContain(unique);
+        expect(unique).toHaveLength(3);
+      });
+
+      it('should generate a unique slug using async exists check', async () => {
+        const existing = ['abc', 'def'];
+        const unique = await generateUniqueSlug({
+          length: 3,
+          minLength: 3,
+          alphabet: 'abcdef',
+          exists: async (slug) => existing.includes(slug)
+        });
+        expect(existing).not.toContain(unique);
+        expect(unique).toHaveLength(3);
+      });
+
+      it('should throw if exists is missing or invalid', async () => {
+        await expect(generateUniqueSlug(null as any)).rejects.toThrow('Options object is required.');
+        await expect(generateUniqueSlug({} as any)).rejects.toThrow('exists option is required and must be a function.');
+      });
+
+      it('should throw if maxRetries is exceeded', async () => {
+        await expect(
+          generateUniqueSlug({
+            length: 5,
+            exists: () => true, // always taken
+            maxRetries: 5
+          })
+        ).rejects.toThrow('Failed to generate a unique slug after 5 attempts.');
+      });
     });
   });
 });
