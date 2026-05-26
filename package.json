@@ -7,8 +7,7 @@
   "homepage": "https://github.com/MohamedGamil/slug-generator/tree/main/#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MohamedGamil/slug-generator.git",
-    "directory": "packages/slug-generator"
+    "url": "git+https://github.com/MohamedGamil/slug-generator.git"
   },
   "bugs": {
     "url": "https://github.com/MohamedGamil/slug-generator/issues"
