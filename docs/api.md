@@ -131,3 +131,14 @@ import { toSlug } from '@mgamil/slug-generator';
 const slug = toSlug('v1.0.0-beta.2', { allowedChars: /[.]/ });
 console.log(slug); // "v1.0.0-beta.2"
 ```
+
+---
+
+## Environment Support & Shims
+
+The package resolves random secure bytes at runtime to support diverse execution environments:
+1. **Web Crypto API**: If `globalThis.crypto.getRandomValues` is defined, it is used directly (browsers, modern cloud workers, Edge runtimes, and Node.js >= 19).
+2. **Node.js Crypto Module**: If Web Crypto is not present, it attempts to dynamically import Node's `'crypto'` module (supported in standard Node.js environments).
+3. **Graceful Fallback**: If neither is supported, it falls back to a pseudo-random number generator utilizing `Math.random` and logs a one-time console warning.
+
+This allows the library to run without throwing errors in browser builds and frontend applications while preserving high-entropy secure generations in supported runtimes.

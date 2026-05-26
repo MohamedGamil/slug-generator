@@ -1,5 +1,64 @@
-import { randomBytes } from 'crypto';
 import { Transliterator } from './transliterator.js';
+
+let randomBytesFn: (size: number) => Uint8Array;
+let warned = false;
+
+if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.getRandomValues === 'function') {
+  randomBytesFn = (size: number) => {
+    const array = new Uint8Array(size);
+    globalThis.crypto.getRandomValues(array);
+    return array;
+  };
+} else {
+  try {
+    const cryptoModule = await import('crypto');
+    randomBytesFn = (size: number) => new Uint8Array(cryptoModule.randomBytes(size));
+  } catch {
+    randomBytesFn = (size: number) => {
+      if (!warned) {
+        console.warn(
+          '[slug-generator] Cryptographically secure random number generator not found in this environment. ' +
+          'Falling back to non-secure Math.random.'
+        );
+        warned = true;
+      }
+      const array = new Uint8Array(size);
+      for (let i = 0; i < size; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    };
+  }
+}
+
+let entropyCounter = 0;
+
+/**
+ * Mixes additional high-resolution timing and environment entropy into the given byte array.
+ * This ensures that randomness integrity is enhanced (especially in Math.random fallback modes)
+ * and collisions are minimized. Mathematically, XORing cryptographically secure random bytes
+ * with secondary independent entropy preserves 100% of the cryptographic randomness integrity.
+ */
+function mixEntropy(bytes: Uint8Array): void {
+  const time = Date.now();
+  const perf = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : 0;
+  const hr = typeof process !== 'undefined' && typeof process.hrtime === 'function' ? process.hrtime()[1] : 0;
+  const pid = typeof process !== 'undefined' ? process.pid : 0;
+  entropyCounter++;
+
+  // Seed combination using XOR of all available entropy sources
+  let seed = time ^ Math.floor(perf * 1000) ^ hr ^ pid ^ entropyCounter;
+
+  // Simple, fast xorshift32 PRNG to generate mixing bytes sequence
+  for (let i = 0; i < bytes.length; i++) {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    
+    // Mix into the byte array via XOR
+    bytes[i] ^= (seed & 0xFF);
+  }
+}
 
 const DEFAULT_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const URL_SAFE_CHARACTERS = new Set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~');
@@ -121,7 +180,8 @@ export function generateSlug(options: GenerateSlugOptions | number = {}): string
   // Use cryptographically secure random bytes with rejection sampling to avoid modulo bias
   while (randomPart.length < length) {
     const bytesNeeded = Math.max(length - randomPart.length, 10);
-    const bytes = randomBytes(bytesNeeded);
+    const bytes = randomBytesFn(bytesNeeded);
+    mixEntropy(bytes);
     for (let i = 0; i < bytes.length && randomPart.length < length; i++) {
       if (bytes[i] < limit) {
         randomPart += alphabet[bytes[i] % alphabetLength];

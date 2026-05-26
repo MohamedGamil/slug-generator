@@ -79,14 +79,23 @@ describe('slug-generator', () => {
     expect(generateSlug(undefined)).toBeDefined();
   });
 
-  it('should verify low collision probability', () => {
+  it('should verify low collision probability at 10k generations (length: 6)', () => {
     const set = new Set<string>();
-    const count = 10000;
+    const count = 10_000;
     for (let i = 0; i < count; i++) {
-      set.add(generateSlug({ length: 10 }));
+      set.add(generateSlug({ length: 6 }));
     }
     expect(set.size).toBe(count); // No duplicates in 10k generations
   });
+
+  it('should verify collision probability at 1 million generations (length: 7)', () => {
+    const set = new Set<string>();
+    const count = 1_000_000;
+    for (let i = 0; i < count; i++) {
+      set.add(generateSlug({ length: 7 }));
+    }
+    expect(set.size).toBe(count);
+  }, 15000); // 15s timeout
 
   describe('toSlug and slugify', () => {
     it('should throw error if input text is not a string', () => {

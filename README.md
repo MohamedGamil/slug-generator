@@ -15,6 +15,7 @@ A powerful, light-weight, zero-dependency utility package for generating random 
 - **Output Control Options**: Manage fallback values for empty results, disable separator/space trimming, and configure consecutive separator collapsing.
 - **Strict Configuration Boundaries**: Robust checks against invalid settings, floating-point parameters, and non-URL-safe parameters.
 - **Modern Module Resolution**: Fully supports ESM imports and typed exports natively.
+- **Multi-Environment Support**: Fully compatible with browsers, Node.js, and serverless environments. Node.js is completely optional.
 
 ## Installation
 
@@ -87,6 +88,13 @@ console.log(customSlug); // "PRODUCT.CODE#1234"
 const emptySlug = toSlug('!!!@@@', { fallback: 'untitled' });
 console.log(emptySlug); // "untitled"
 ```
+
+## Environment Support
+
+`@mgamil/slug-generator` is designed to be environment-agnostic, running seamlessly in Node.js, modern browsers, Edge functions, and serverless environments:
+* **Modern Browsers & Edge Runtimes**: Uses the native Web Crypto API (`globalThis.crypto.getRandomValues`) for cryptographically secure random slug generation.
+* **Node.js**: Automatically resolves the Node.js built-in `crypto` module as a secure random generator when `globalThis.crypto` is unavailable.
+* **Graceful Fallback**: If neither Web Crypto nor Node `crypto` is present in the runtime environment, the library automatically falls back to generating pseudo-random bytes via `Math.random` and logs a one-time console warning.
 
 ## Documentation
 
