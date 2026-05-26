@@ -1,6 +1,6 @@
 # Slug Generator
 
-A powerful, light-weight, zero-dependency utility package for generating random cryptographically secure slugs and sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints.
+A powerful, light-weight, zero-dependency utility package for generating random cryptographically secure slugs, sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints, and providing highly scalable unique slug generation tools (UUID, Snowflake, Bloom Filters, Batch Pools, and Obfuscated Counters).
 
 ## Features
 
@@ -12,8 +12,11 @@ A powerful, light-weight, zero-dependency utility package for generating random 
 - **Phonetic Transliteration**: Convert non-Latin scripts (Cyrillic, Greek, Arabic, Hebrew, Japanese Hiragana/Katakana, common Chinese Hanzi, and common Korean Hangul) to their phonetic spoken ASCII equivalents.
 - **Casing Controls**: Toggle lowercase, uppercase, or preserve casing.
 - **Regex & String Allowed Characters**: Pass custom allowed characters via literal strings or regular expressions.
-- **Output Control Options**: Manage fallback values for empty results, disable separator/space trimming, and configure consecutive separator collapsing.
-- **Strict Configuration Boundaries**: Robust checks against invalid settings, floating-point parameters, and non-URL-safe parameters.
+- **UUID Slug Generator**: Generate standard UUIDv4, time-ordered sortable UUIDv6, and compact 22-character Base64 URL-safe slug representations of UUIDs.
+- **Snowflake ID Slug Generator**: Generate Twitter-compatible 64-bit Snowflake IDs as bigints, decimal strings, or compact URL-safe base64 slugs with automatic millisecond rollover.
+- **In-Memory Bloom Filter**: Space-efficient membership testing using MurmurHash3 and Base64 export/import serialization to offload database query load.
+- **Unique Batch Pools**: Pre-generate unique random slugs in memory or seed database pools with batch conflict resolution.
+- **Obfuscated Sequence Counters**: Map auto-incrementing integers bijectively to guaranteed unique, non-guessable slugs using Knuth's multiplicative hashing (zero read-before-write queries).
 - **Modern Module Resolution**: Fully supports ESM imports and typed exports natively.
 - **Multi-Environment Support**: Fully compatible with browsers, Node.js, and serverless environments. Node.js is completely optional.
 
@@ -50,7 +53,7 @@ const prefixedId = generateSlug({
 console.log(prefixedId); // e.g. "invite_K9xP2m_promo"
 ```
 
-### 2. Generating Unique Slugs
+### 2. Generating Unique Slugs (Database Verification)
 
 ```typescript
 import { generateUniqueSlug } from '@mgamil/slug-generator';
@@ -83,10 +86,135 @@ const customSlug = toSlug('product.code#1234', {
   allowedChars: /[.#]/
 });
 console.log(customSlug); // "PRODUCT.CODE#1234"
+```
 
-// Fallback for empty results
-const emptySlug = toSlug('!!!@@@', { fallback: 'untitled' });
-console.log(emptySlug); // "untitled"
+### 4. Shorthand easy helpers
+
+For quick access, you can use these simple, easy-to-remember shorthand functions to access all unique slug generation features directly:
+
+```typescript
+import {
+  uuidv4,
+  uuidv6,
+  uuidSlug,
+  snowflake,
+  snowflakeSlug,
+  obfuscate,
+  createSlugBatch
+} from '@mgamil/slug-generator';
+
+// 1. UUID Shorthands
+const v4 = uuidv4(); // "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
+const v6 = uuidv6(); // "1e11d07d-ecfa-6000-a765-00a0c91e6bf6"
+const slug1 = uuidSlug(v4); // "OB1Prn3sEdCnZQCgyR5r9g"
+
+// 2. Snowflake Shorthands
+const sfStr = snowflake(); // "3471034444"
+const sfSlug = snowflakeSlug(); // "dI-8a"
+
+// 3. Counter Obfuscation Shorthand
+const scrambledSlug = obfuscate(1); // "dI-8aK"
+
+// 4. Batch Memory Pool Shorthand
+const batch = createSlugBatch(100, { length: 6 });
+```
+
+---
+
+## Unique Slug Generator Suites
+
+For large-scale applications (e.g., URL shorteners), the package provides high-performance class-based tools to guarantee uniqueness with zero database reads.
+
+### 1. Obfuscated Sequence Counters (Recommended)
+Map sequential counters (like an auto-incrementing database ID or Snowflake ID) bijectively to unique, scrambled base64-like slugs. This guarantees uniqueness and prevents guessability without running read queries.
+
+```typescript
+import { ObfuscatedSequenceSlugGenerator } from '@mgamil/slug-generator';
+
+const generator = new ObfuscatedSequenceSlugGenerator({
+  minLength: 6,
+  alphabet: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'
+});
+
+// Always deterministic, guaranteed 100% collision-free
+console.log(generator.generate(1)); // "dI-8aK"
+console.log(generator.generate(2)); // "m82K_p"
+```
+
+### 2. UUID Slug Generator
+Generate standard UUIDv4, database-friendly time-ordered sortable UUIDv6, or compact them into 22-character URL slugs.
+
+```typescript
+import { UuidSlugGenerator } from '@mgamil/slug-generator';
+
+// Standard UUIDv4
+const uuidV4 = UuidSlugGenerator.v4(); // "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
+
+// Compact 22-char URL safe slug
+const compactSlug = UuidSlugGenerator.slugify(uuidV4); // "OB1Prn3sEdCnZQCgyR5r9g"
+
+// Time-ordered sortable UUIDv6
+const uuidV6 = UuidSlugGenerator.v6(); // "1e11d07d-ecfa-6000-a765-00a0c91e6bf6"
+```
+
+### 3. Snowflake Slug Generator
+Twitter-compatible 64-bit Snowflake IDs containing timestamps, worker/machine ID, and sequence rollover bits.
+
+```typescript
+import { SnowflakeSlugGenerator } from '@mgamil/slug-generator';
+
+const generator = new SnowflakeSlugGenerator({
+  workerId: 42,
+  epoch: 1767225600000n // Jan 1, 2026
+});
+
+// Raw bigint ID
+const bigintId = generator.generate(); // 3471034444n
+
+// Decimal string ID
+const stringId = generator.generateString(); // "3471034444"
+
+// URL-safe base64 encoded compact slug
+const slug = generator.generateSlug(); // "dI-8a"
+```
+
+### 4. In-Memory Bloom Filter
+An extremely space-efficient filter used to check if a generated slug already exists. By maintaining a Bloom Filter locally in memory, you can avoid 99% of database read checks (0% false negatives, ~1% false positives).
+
+```typescript
+import { BloomFilter } from '@mgamil/slug-generator';
+
+// Create a filter expecting 1 million elements with a 1% false positive rate
+const filter = new BloomFilter(1000000, 0.01);
+
+// Add items
+filter.add('hello-world');
+
+// Check membership (probabilistic check)
+if (!filter.mightContain('unique-slug')) {
+  // 100% guaranteed unique! Save to DB directly without read verification
+}
+
+// Export / Import states
+const serialized = filter.export(); // Serialized base64 string
+const newFilter = BloomFilter.import(serialized, 1000000, 0.01);
+```
+
+### 5. Out-of-Band Database Pools
+Generate batches of unique slugs in memory to seed database pools asynchronously.
+
+```typescript
+import { SlugPoolGenerator } from '@mgamil/slug-generator';
+
+// 1. Generate a batch of unique random slugs in memory
+const batch = SlugPoolGenerator.generateUniqueBatch(1000, { length: 6 });
+
+// 2. Feed an external database pool asynchronously
+await SlugPoolGenerator.fillDbPool(5000, async (slugs) => {
+  // Execute a bulk insert using IGNORE or ON CONFLICT DO NOTHING
+  const result = await db.slugs.insertMany(slugs, { ignoreConflicts: true });
+  return result.insertedCount; // Return actual rows inserted
+});
 ```
 
 ## Environment Support

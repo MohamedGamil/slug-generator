@@ -1,144 +1,148 @@
 # API Reference - Slug Generator
 
-This document contains a detailed specification of the types, functions, configuration limits, and exception rules in the `@mgamil/slug-generator` package.
+This document contains a detailed specification of the classes, types, functions, configuration limits, and exception rules in the `@mgamil/slug-generator` package.
 
 ---
 
-## Functions
+## Configuration Interfaces (`src/types.ts`)
 
-### `generateSlug(options?: GenerateSlugOptions | number): string`
-Generates a cryptographically secure random slug using a bias-free selection algorithm.
+### `GenerateSlugOptions`
+Options for random slug generation:
+* **`length`** (`number`): Target length of the random part. Defaults to `8`.
+* **`alphabet`** (`string`): Set of allowed characters. Defaults to standard base64 url-safe character set.
+* **`minLength`** (`number`): Minimum allowable random length limit configuration. Defaults to `5`. Must be >= 2.
+* **`maxLength`** (`number`): Maximum allowable random length limit configuration. Defaults to `64`. Must be <= 64.
+* **`prefix`** (`string`): Fixed prefix to prepend.
+* **`suffix`** (`string`): Fixed suffix to append.
+* **`separator`** (`string`): Character joining prefix/suffix with random part. Must be exactly 1 character and URL-safe.
 
-If `options` is a `number`, it is treated as the configuration for the target `length` of the generated slug (with defaults applied for other options).
+### `ToSlugOptions`
+Options for text sanitization / slugification:
+* **`preserveCase`** (`boolean`): If `true`, keeps original case.
+* **`lowercase`** (`boolean`): If `true`, outputs lowercase (default).
+* **`uppercase`** (`boolean`): If `true`, outputs uppercase.
+* **`preserveSpace`** (`boolean`): If `true`, spaces remain literal space characters `" "`.
+* **`preserveUnicode`** (`boolean`): If `true`, bypasses accent decomposition and phonetic transliteration, retaining Unicode letters/numbers.
+* **`transliterate`** (`boolean`): If `true` (default), phonetic transliteration of major scripts is enabled.
+* **`minLength`** (`number`): Minimum allowed sanitized length. Defaults to `1`. Must be >= 1.
+* **`maxLength`** (`number`): Maximum allowed sanitized length. Defaults to `128`. Must be <= 128.
+* **`separator`** (`string`): Replacer for space and non-allowed characters. Defaults to `'-'`. Must be exactly 1 character and URL-safe.
+* **`allowedCharacters`** (`string`): Set of extra URL-safe characters to preserve.
+* **`allowedChars`** (`RegExp | string`): Alias of `allowedCharacters`, supporting regular expressions.
+* **`fallback`** (`string`): Fallback return value if output is empty. If set to `"%AUTO%"`, it generates a random 8-character secure slug.
+* **`trim`** (`boolean`): If `true` (default), trims leading and trailing separators.
+* **`collapseSeparators`** (`boolean`): If `true` (default), collapses consecutive separators.
 
-#### Options (`GenerateSlugOptions`)
-All options are optional:
-* **`length`** (`number`): The target length of the generated random part. Defaults to `8`.
-* **`alphabet`** (`string`): The set of allowed characters for the random part. Defaults to a standard alphanumeric-hyphen-underscore set: `A-Z`, `a-z`, `0-9`, `-`, `_`.
-* **`minLength`** (`number`): Configures the minimum allowable generated random length limit. Defaults to `5`. Must be an integer >= 2.
-* **`maxLength`** (`number`): Configures the maximum allowable generated random length limit. Defaults to `64`. Must be an integer <= 64.
-* **`prefix`** (`string`): An optional fixed prefix prepended to the generated slug.
-* **`suffix`** (`string`): An optional fixed suffix appended to the generated slug.
-* **`separator`** (`string`): Separator character between the prefix/suffix and the random part. Defaults to no separator. Must be exactly 1 character and belong to `a-zA-Z0-9-_.~`.
+### `GenerateUniqueSlugOptions`
+Extends `GenerateSlugOptions` with:
+* **`exists`** (`(slug: string) => boolean | Promise<boolean>`): **[Required]** Callback returning `true` if slug is taken.
+* **`maxRetries`** (`number`): Maximum checks before throwing. Defaults to `100`.
 
-#### Exceptions
-Throws an `Error` if:
-* `alphabet` is not a string or is empty.
-* `length`, `minLength`, or `maxLength` are not integers.
-* Configured `minLength` is less than `2`.
-* Configured `maxLength` exceeds `64`.
-* Configured `minLength` is greater than `maxLength`.
-* Requested `length` is outside the range defined by `[minLength, maxLength]`.
-* `prefix` or `suffix` is specified but is not a string, or contains characters that are not URL-safe.
-* `separator` is specified but is not exactly 1 character or is not URL-safe.
+### `SnowflakeOptions`
+Options for Snowflake ID generation:
+* **`epoch`** (`number | bigint`): Custom epoch timestamp in milliseconds. Defaults to January 1, 2026 (`1767225600000n`).
+* **`workerId`** (`number | bigint`): Machine/worker identifier (0-1023). Defaults to `0`.
 
----
-
-### `generateUniqueSlug(options: GenerateUniqueSlugOptions): Promise<string>`
-Generates a unique cryptographically secure random slug. It iteratively calls `generateSlug` and checks uniqueness using a custom callback.
-
-#### Options (`GenerateUniqueSlugOptions`)
-Extends `GenerateSlugOptions` and adds:
-* **`exists`** (`(slug: string) => boolean | Promise<boolean>`): **[Required]** Callback function that resolves to `true` if the slug is already taken (exists) and `false` if it is unique.
-* **`maxRetries`** (`number`): Maximum number of attempts to generate a unique slug before throwing an error. Defaults to `100`. Must be a positive integer.
-
-#### Exceptions
-Throws an `Error` if:
-* Options object is missing.
-* `exists` callback is missing or is not a function.
-* `maxRetries` is not a positive integer.
-* A unique slug cannot be generated after `maxRetries` attempts.
-* Any parameters fail `generateSlug` validation.
-
----
-
-### `toSlug(text: string, options?: ToSlugOptions): string`
-Sanitized arbitrary UTF-8 text into a URL-friendly slug. Alias: `slugify`.
-
-#### Options (`ToSlugOptions`)
-All options are optional:
-* **`preserveCase`** (`boolean`): If `true`, preserves the original case of characters.
-* **`lowercase`** (`boolean`): If `true`, converts the output to lowercase (default behavior if casing options are unspecified).
-* **`uppercase`** (`boolean`): If `true`, converts the output to uppercase.
-* **`preserveSpace`** (`boolean`): If `true`, spaces are preserved as space characters `" "` (consecutive spaces collapsed, leading/trailing trimmed). If `false` (default), all spaces are replaced by the `separator` character.
-* **`preserveUnicode`** (`boolean`): If `true`, preserves non-ASCII Unicode letters and numbers in the output. Skips phonetic transliteration and accent decomposition.
-* **`transliterate`** (`boolean`): If `true` (default), automatically converts non-Latin scripts (Cyrillic, Arabic, Hebrew, Chinese, Japanese, Korean, Greek) to ASCII phonetic equivalents.
-* **`minLength`** (`number`): Configures the minimum allowable sanitized length. Defaults to `1`. Must be an integer >= 1.
-* **`maxLength`** (`number`): Configures the maximum allowable sanitized length. Defaults to `128`. Must be an integer <= 128.
-* **`separator`** (`string`): A single custom character used to replace spaces when `preserveSpace` is `false`. Defaults to `'-'`. Must be exactly 1 character long and must be a URL-safe character (`a-zA-Z0-9-_.~`).
-* **`allowedCharacters`** (`string`): A string containing custom characters allowed to remain in the sanitized slug. Only characters from the predefined URL-safe set (`a-zA-Z0-9-_.~`) are allowed.
-* **`allowedChars`** (`RegExp | string`): Superset/alias of `allowedCharacters`. Accepts a string of allowed characters, or a regular expression representing custom allowed characters.
-* **`fallback`** (`string`): A fallback string value returned if the sanitized slug is empty or shorter than `minLength` (e.g. if input contains only stripped emojis/symbols).
-* **`trim`** (`boolean`): If `true` (default), trims leading and trailing separators and spaces.
-* **`collapseSeparators`** (`boolean`): If `true` (default), collapses multiple consecutive separators.
-
-#### Exception/Trimming Flow
-1. Validates options parameters and throws immediate exceptions if bounds, types, or separators are invalid.
-2. If `lowercase` and `uppercase` are both set to `true`, throws a casing conflict exception.
-3. Transliterates supported non-Latin scripts to phonetic ASCII equivalents (unless `transliterate` is set to `false` or `preserveUnicode` is `true`).
-4. Performs Unicode normalization:
-   - NFC normalization if `preserveUnicode` is `true`.
-   - NFD normalization + accent stripping if `preserveUnicode` is `false`.
-5. Adjusts casing based on `preserveCase`, `lowercase`, and `uppercase` settings.
-6. Filters characters keeping only alphanumeric (ASCII-only or Unicode depending on `preserveUnicode`), spaces, hyphens, underscores, and characters matching `allowedChars`/`allowedCharacters`.
-7. Replaces whitespace/hyphens/underscores with `separator` (unless `preserveSpace` is `true`). Collapses consecutive separators if `collapseSeparators` is `true`.
-8. Trims leading/trailing separators and spaces (unless `trim` is `false`).
-9. Truncates to `maxLength`.
-10. Checks `minLength`. If too short, returns `fallback` if provided; otherwise, throws an `Error`.
+### `ObfuscatedSequenceOptions`
+Options for bijective scrambled counter slug generator:
+* **`alphabet`** (`string`): Custom alphabet for base encoding.
+* **`minLength`** (`number`): Minimum padded output length. Defaults to `6`.
+* **`multiplier`** (`bigint`): Knuth's co-prime multiplier. Defaults to `2654435761n`.
+* **`modulo`** (`bigint`): Divisor for range mapping. Defaults to `4294967296n` ($2^{32}$).
 
 ---
 
-## Examples
+## Classes & Services
 
-### Generating Unique Slugs in Database
-```typescript
-import { generateUniqueSlug } from '@mgamil/slug-generator';
+### `RandomSlugGenerator` (`src/core/random.ts`)
+* **`static generate(options?: GenerateSlugOptions | number): string`**
+  Generates a cryptographically secure random slug. Modulo bias is avoided using rejection sampling.
+* **`static generateBatch(count: number, options?: GenerateSlugOptions | number): string[]`**
+  Generates a batch of secure random slugs. Pre-allocates single combined byte buffers internally to maximize throughput and minimize sys-call overhead.
 
-const slug = await generateUniqueSlug({
-  length: 12,
-  exists: async (newSlug) => {
-    const count = await db.users.count({ where: { referralSlug: newSlug } });
-    return count > 0;
-  }
-});
-```
+### `TextSlugifier` (`src/core/sanitize.ts`)
+* **`static sanitize(text: string, options?: ToSlugOptions): string`**
+  Sanitizes arbitrary UTF-8 text into a URL-friendly slug according to options. Handles script transliterations and casing rules.
 
-### Prefix, Suffix, and Separator for Random Slugs
-```typescript
-import { generateSlug } from '@mgamil/slug-generator';
+### `UniqueSlugService` (`src/core/unique.ts`)
+* **`static generate(options: GenerateUniqueSlugOptions): Promise<string>`**
+  Asynchronously generates a unique secure random slug by evaluating the `exists` callback in retry loop.
 
-const code = generateSlug({
-  length: 6,
-  prefix: 'REF',
-  suffix: '2026',
-  separator: '_'
-});
-console.log(code); // e.g. "REF_aK92mz_2026"
-```
+### `UuidSlugGenerator` (`src/generators/uuid.ts`)
+* **`static v4(): string`**
+  Generates standard RFC 4122 random UUIDv4.
+* **`static v6(): string`**
+  Generates time-ordered sortable UUIDv6. Features randomized clock sequences and multicast node identifiers generated once per lifecycle.
+* **`static slugify(uuid: string): string`**
+  Compacts standard 36-char UUID string into 22-char Base64 URL-safe slug.
 
-### Preserving Unicode Characters
-```typescript
-import { toSlug } from '@mgamil/slug-generator';
+### `SnowflakeSlugGenerator` (`src/generators/snowflake.ts`)
+* **`constructor(options?: SnowflakeOptions)`**
+  Initializes generator with custom epoch and worker ID.
+* **`generate(): bigint`**
+  Generates raw 64-bit Snowflake ID (timestamp offset + worker + sequence rollover).
+* **`generateString(): string`**
+  Generates Snowflake ID formatted as decimal string.
+* **`generateSlug(): string`**
+  Generates compact base64-encoded URL-safe slug representation of the Snowflake ID.
 
-const slug = toSlug('Café au lait & مرحبا', { preserveUnicode: true });
-console.log(slug); // "café-au-lait-مرحبا"
-```
+### `BloomFilter` (`src/structures/bloom.ts`)
+* **`constructor(expectedCapacity: number, falsePositiveRate?: number)`**
+  Computes mathematically optimal size and hash count for filter bits array.
+* **`add(item: string): void`**
+  Inserts item into filter using MurmurHash3.
+* **`mightContain(item: string): boolean`**
+  Probabilistic membership check. Returns `false` if item is guaranteed unique (not in set).
+* **`export(): string`**
+  Serializes internal bit array to Base64 URL-safe string.
+* **`static import(serialized: string, expectedCapacity: number, falsePositiveRate?: number): BloomFilter`**
+  Reconstructs a Bloom Filter from a serialized base64 string.
 
-### Regular Expression Allowed Characters
-```typescript
-import { toSlug } from '@mgamil/slug-generator';
+### `SlugPoolGenerator` (`src/structures/pool.ts`)
+* **`static generateUniqueBatch(count: number, options?: GenerateSlugOptions | number): string[]`**
+  Generates a batch of random slugs, guaranteeing absolute uniqueness *within* the returned array.
+* **`static fillDbPool(count: number, insertFn: (slugs: string[]) => Promise<number>, options?: GenerateSlugOptions | number): Promise<number>`**
+  Seeds external pools/databases. Executes batches and monitors returns from `insertFn` (which handles database conflict resolution) until target count is fully populated.
 
-const slug = toSlug('v1.0.0-beta.2', { allowedChars: /[.]/ });
-console.log(slug); // "v1.0.0-beta.2"
-```
+### `ObfuscatedSequenceSlugGenerator` (`src/structures/pool.ts`)
+* **`constructor(options?: ObfuscatedSequenceOptions)`**
+  Initializes parameters and co-prime constants.
+* **`generate(counter: number | bigint): string`**
+  Bijectively scrambles sequence counter to produce guaranteed unique and non-guessable URL slug.
+
+---
+
+## Shorthand Functional Helpers (`src/helpers.ts`)
+
+* **`uuidv4(): string`**
+  Generates a standard random UUIDv4 string.
+* **`uuidv6(): string`**
+  Generates a time-ordered UUIDv6 string.
+* **`uuidSlug(uuid: string): string`**
+  Compacts standard 36-character UUID string into 22-character URL-safe Base64 slug.
+* **`snowflake(options?: SnowflakeOptions): string`**
+  Generates decimal string Snowflake ID.
+* **`snowflakeSlug(options?: SnowflakeOptions): string`**
+  Generates compact base64 URL-safe slug representation of Snowflake ID.
+* **`obfuscate(counter: number | bigint, options?: ObfuscatedSequenceOptions): string`**
+  Maps sequential counter bijectively to unique scrambled URL slug.
+* **`createSlugBatch(count: number, options?: GenerateSlugOptions | number): string[]`**
+  Generates batch of unique random slugs in memory.
+
+---
+
+## isolated Utility Functions (`src/utils.ts`)
+
+* **`bytesToBase64Url(bytes: Uint8Array): string`**
+  Encodes a byte array into a URL-safe Base64 string without padding.
+* **`base64UrlToBytes(str: string): Uint8Array`**
+  Decodes a URL-safe Base64 string without padding back into a Uint8Array.
 
 ---
 
 ## Environment Support & Shims
 
-The package resolves random secure bytes at runtime to support diverse execution environments:
-1. **Web Crypto API**: If `globalThis.crypto.getRandomValues` is defined, it is used directly (browsers, modern cloud workers, Edge runtimes, and Node.js >= 19).
-2. **Node.js Crypto Module**: If Web Crypto is not present, it attempts to dynamically import Node's `'crypto'` module (supported in standard Node.js environments).
-3. **Graceful Fallback**: If neither is supported, it falls back to a pseudo-random number generator utilizing `Math.random` and logs a one-time console warning.
-
-This allows the library to run without throwing errors in browser builds and frontend applications while preserving high-entropy secure generations in supported runtimes.
+The package dynamically selects the best available cryptographically secure random number source:
+1. **Web Crypto API**: `globalThis.crypto.getRandomValues` used if available (modern browsers, Deno, Bun, Cloudflare Workers, Node.js >= 19).
+2. **Node.js Crypto Module**: Dynamically imported `crypto` as fallback for traditional Node setups.
+3. **Graceful Fallback**: Math.random pseudorandom bytes salted with process/time entropy (`mixEntropy`) as safety shim if no secure random source is found.

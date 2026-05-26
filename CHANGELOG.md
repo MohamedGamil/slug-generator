@@ -2,6 +2,34 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.5.0] - 2026-05-27
+
+### Added
+- Shorthand functional helpers for easy, easy-to-remember access to new unique slug features:
+  - `uuidv4()`: Shorthand for standard UUIDv4 string generation.
+  - `uuidv6()`: Shorthand for time-ordered sortable UUIDv6 string generation.
+  - `uuidSlug(uuid)`: Shorthand for compacting standard UUIDs into 22-char URL slugs.
+  - `snowflake(options)`: Shorthand for Snowflake decimal string generation.
+  - `snowflakeSlug(options)`: Shorthand for Snowflake Base64 URL-safe slug generation.
+  - `obfuscate(counter, options)`: Shorthand for scrambled Knuth-based sequence counter slug generation.
+  - `createSlugBatch(count, options)`: Shorthand for generating a batch of unique slugs in memory.
+- Documented all source files, classes, constructors, methods, and constants with detailed JSDoc comments.
+- Expanded unit test coverage in `src/unique.spec.ts` to cover error boundaries, constraint parameters, and new shorthand helpers.
+
+---
+
+## [1.4.0] - 2026-05-27
+
+### Refactored
+- Extracted repeated constants (`DEFAULT_ALPHABET`, `URL_SAFE_CHARACTERS`) and Base64 URL-safe encoding/decoding utilities into an isolated `src/utils.ts` module.
+- Isolated all configuration and options interfaces (`GenerateSlugOptions`, `ToSlugOptions`, `GenerateUniqueSlugOptions`, `SnowflakeOptions`, `ObfuscatedSequenceOptions`) into `src/types.ts`.
+- Cleaned up imports and eliminated redundant implementations across all core, generator, and structure modules.
+
+### Added
+- Unit tests for the new isolated Base64 URL conversion utilities in `src/utils.spec.ts`.
+
+---
+
 ## [1.3.0] - 2026-05-26
 
 ### Added
