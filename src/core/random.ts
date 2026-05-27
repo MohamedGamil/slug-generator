@@ -11,11 +11,19 @@ if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.
     return array;
   };
 } else {
+  let nodeCrypto: any;
   try {
-    // Dynamic import to avoid browser static resolution failure
-    const cryptoModule = await import('crypto');
-    randomBytesFn = (size: number) => new Uint8Array(cryptoModule.randomBytes(size));
-  } catch {
+    const req = typeof require !== 'undefined' 
+      ? require 
+      : typeof globalThis !== 'undefined' && (globalThis as any).require;
+    if (req) {
+      nodeCrypto = req('crypto');
+    }
+  } catch {}
+
+  if (nodeCrypto && typeof nodeCrypto.randomBytes === 'function') {
+    randomBytesFn = (size: number) => new Uint8Array(nodeCrypto.randomBytes(size));
+  } else {
     randomBytesFn = (size: number) => {
       if (!warned) {
         console.warn(
