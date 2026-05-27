@@ -2,6 +2,14 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.5.1] - 2026-05-27
+
+### Fixed
+- Resolved CommonJS loader error `ERR_REQUIRE_ASYNC_MODULE` by eliminating top-level `await` statement from `random.ts`.
+- Implemented a top-level-await-free runtime check for cryptographic random bytes, safely resolving to Web Crypto API (`globalThis.crypto.getRandomValues`) or Node's native `require('crypto')` synchronously.
+
+---
+
 ## [1.5.0] - 2026-05-27
 
 ### Added
