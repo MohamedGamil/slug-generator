@@ -19,7 +19,9 @@ if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.
     if (req) {
       nodeCrypto = req('crypto');
     }
-  } catch {}
+  } catch {
+    // Ignore require error in environment without require
+  }
 
   if (nodeCrypto && typeof nodeCrypto.randomBytes === 'function') {
     randomBytesFn = (size: number) => new Uint8Array(nodeCrypto.randomBytes(size));
