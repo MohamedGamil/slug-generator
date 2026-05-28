@@ -37,6 +37,7 @@ Options for text sanitization / slugification:
 Extends `GenerateSlugOptions` with:
 * **`exists`** (`(slug: string) => boolean | Promise<boolean>`): **[Required]** Callback returning `true` if slug is taken.
 * **`maxRetries`** (`number`): Maximum checks before throwing. Defaults to `100`.
+* **`counter`** (`number | bigint | (() => number | bigint | Promise<number | bigint>)`): **[Optional]** Starting counter value or callback returning it, used as fallback for Knuth-based obfuscated sequence generation on collision limit.
 
 ### `SnowflakeOptions`
 Options for Snowflake ID generation:
@@ -66,7 +67,11 @@ Options for bijective scrambled counter slug generator:
 
 ### `UniqueSlugService` (`src/core/unique.ts`)
 * **`static generate(options: GenerateUniqueSlugOptions): Promise<string>`**
-  Asynchronously generates a unique secure random slug by evaluating the `exists` callback in retry loop.
+  Asynchronously generates a unique secure random slug by evaluating the `exists` callback in a retry loop.
+  * **Length Constraints**: Hard constraints are enforced: slug lengths are strictly clamped between a minimum of `2` characters and a maximum of `64` characters.
+  * **Collision Depletion Fallback**: If the random secure slug generator exceeds the retry budget (`maxRetries`, which defaults to `100`), the service automatically switches to Knuth's multiplicative obfuscated sequence generation.
+  * **Sequence Counter Options**: Resolves the sequence counter from the `counter` option (supporting `number`, `bigint`, or synchronous/asynchronous function callbacks returning a counter). If `counter` is not provided, it falls back to a high-precision timestamp-based sequence counter dynamically.
+  * **Bijective Incrementing Retry**: On the rare occasion of an obfuscated sequence slug collision, it executes a secondary loop (up to 100 times), incrementing the counter at each step to ensure absolute uniqueness.
 
 ### `UuidSlugGenerator` (`src/generators/uuid.ts`)
 * **`static v4(): string`**

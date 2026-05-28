@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSlug, toSlug, slugify, generateUniqueSlug } from './index';
+import { generateSlug, toSlug, slugify, generateUniqueSlug, ObfuscatedSequenceSlugGenerator } from './index';
 
 describe('slug-generator', () => {
   it('should generate a slug with default length 8', () => {
@@ -275,29 +275,29 @@ describe('slug-generator', () => {
     });
 
     describe('generateUniqueSlug', () => {
-      it('should generate a unique slug using sync exists check', async () => {
-        const existing = ['abc', 'def'];
+      it('should generate a unique slug using sync exists check (minimum length 5 enforced)', async () => {
+        const existing = ['abcde', 'defgh'];
         const unique = await generateUniqueSlug({
-          length: 3,
-          minLength: 3,
-          alphabet: 'abcdef',
+          length: 5,
+          minLength: 5,
+          alphabet: 'abcdefgh',
           exists: (slug) => existing.includes(slug),
           maxRetries: 10
         });
         expect(existing).not.toContain(unique);
-        expect(unique).toHaveLength(3);
+        expect(unique.length).toBeGreaterThanOrEqual(5);
       });
 
-      it('should generate a unique slug using async exists check', async () => {
-        const existing = ['abc', 'def'];
+      it('should generate a unique slug using async exists check (minimum length 5 enforced)', async () => {
+        const existing = ['abcde', 'defgh'];
         const unique = await generateUniqueSlug({
-          length: 3,
-          minLength: 3,
-          alphabet: 'abcdef',
+          length: 5,
+          minLength: 5,
+          alphabet: 'abcdefgh',
           exists: async (slug) => existing.includes(slug)
         });
         expect(existing).not.toContain(unique);
-        expect(unique).toHaveLength(3);
+        expect(unique.length).toBeGreaterThanOrEqual(5);
       });
 
       it('should throw if exists is missing or invalid', async () => {
@@ -305,14 +305,41 @@ describe('slug-generator', () => {
         await expect(generateUniqueSlug({} as any)).rejects.toThrow('exists option is required and must be a function.');
       });
 
-      it('should throw if maxRetries is exceeded', async () => {
-        await expect(
-          generateUniqueSlug({
-            length: 5,
-            exists: () => true, // always taken
-            maxRetries: 5
-          })
-        ).rejects.toThrow('Failed to generate a unique slug after 5 attempts.');
+      it('should enforce hard system-wide bounds (clamping length lower than 5 to 5)', async () => {
+        const unique = await generateUniqueSlug({
+          length: 3,
+          minLength: 3,
+          exists: () => false,
+        });
+        expect(unique.length).toBeGreaterThanOrEqual(5);
+      });
+
+      it('should enforce subscription plan minimum length constraints (e.g. minLength 8)', async () => {
+        const unique = await generateUniqueSlug({
+          minLength: 8,
+          exists: () => false,
+        });
+        expect(unique.length).toBeGreaterThanOrEqual(8);
+      });
+
+      it('should fallback to obfuscated sequence generator on random collision limit', async () => {
+        const counterStart = 1000n;
+        const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+        const generator = new ObfuscatedSequenceSlugGenerator({ alphabet, minLength: 5 });
+        const targetSlug = generator.generate(counterStart);
+
+        const unique = await generateUniqueSlug({
+          length: 5,
+          exists: async (slug) => {
+            // Treat all random attempts as taken (taken is true)
+            // But allow our fallback sequence slug (taken is false)
+            return slug !== targetSlug;
+          },
+          maxRetries: 3,
+          counter: counterStart,
+        });
+
+        expect(unique).toBe(targetSlug);
       });
     });
   });

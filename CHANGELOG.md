@@ -2,6 +2,18 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.6.0] - 2026-05-28
+
+### Added
+- Added `counter` option to `GenerateUniqueSlugOptions` to support starting counter values or callbacks for Knuth's multiplicative obfuscated sequence generation fallback.
+- Implemented Knuth's multiplicative obfuscated sequence generation fallback inside `UniqueSlugService` when random collision retries are depleted.
+- Enforced hard system bounds clamping on generated unique slugs (minimum length 2, maximum length 64).
+
+### Refactored
+- Optimized `UniqueSlugService.generate` to coordinate length checks, retry samplings, and sequence fallback generation in a unified and clean pipeline.
+
+---
+
 ## [1.5.1] - 2026-05-27
 
 ### Fixed

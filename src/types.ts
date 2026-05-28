@@ -98,6 +98,11 @@ export interface GenerateUniqueSlugOptions extends GenerateSlugOptions {
    * Maximum number of attempts to generate a unique slug before throwing an error. Defaults to `100`.
    */
   maxRetries?: number;
+  /**
+   * Optional starting counter value (number or bigint) or a function returning it (sync or async)
+   * used as fallback for obfuscated sequence generation.
+   */
+  counter?: number | bigint | (() => number | bigint | Promise<number | bigint>);
 }
 
 export interface SnowflakeOptions {

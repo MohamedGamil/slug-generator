@@ -55,15 +55,20 @@ console.log(prefixedId); // e.g. "invite_K9xP2m_promo"
 
 ### 2. Generating Unique Slugs (Database Verification)
 
+Generates unique slugs with collision detection and a Knuth-based obfuscated sequence fallback if the retry limit is exhausted. Also enforces constraints (length between 2 and 64).
+
 ```typescript
 import { generateUniqueSlug } from '@mgamil/slug-generator';
 
 const slug = await generateUniqueSlug({
   length: 10,
+  minLength: 5,
   exists: async (val) => {
-    // Check in database
+    // Verify uniqueness in database
     return await db.posts.exists({ where: { slug: val } });
-  }
+  },
+  maxRetries: 5, // Optional. Defaults to 100
+  counter: 1000n // Optional. Starting sequence counter fallback (or async callback returning it)
 });
 ```
 
