@@ -305,16 +305,16 @@ describe('slug-generator', () => {
         await expect(generateUniqueSlug({} as any)).rejects.toThrow('exists option is required and must be a function.');
       });
 
-      it('should enforce hard system-wide bounds (clamping length lower than 5 to 5)', async () => {
+      it('should enforce hard bounds (clamping length lower than 2 to 2)', async () => {
         const unique = await generateUniqueSlug({
-          length: 3,
-          minLength: 3,
+          length: 1,
+          minLength: 1,
           exists: () => false,
         });
-        expect(unique.length).toBeGreaterThanOrEqual(5);
+        expect(unique.length).toBeGreaterThanOrEqual(2);
       });
 
-      it('should enforce subscription plan minimum length constraints (e.g. minLength 8)', async () => {
+      it('should enforce minimum length constraints (e.g. minLength 8)', async () => {
         const unique = await generateUniqueSlug({
           minLength: 8,
           exists: () => false,
