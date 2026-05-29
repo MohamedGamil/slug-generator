@@ -1,6 +1,70 @@
-# Slug Generator
+<h1 align="center">@mgamil/slug-generator</h1>
 
-A powerful, light-weight, zero-dependency utility package for generating random cryptographically secure slugs, sanitizing arbitrary UTF-8 text into URL-safe formats with configurable constraints, and providing highly scalable unique slug generation tools (UUID, Snowflake, Bloom Filters, Batch Pools, and Obfuscated Counters).
+<p align="center">
+<a href="https://npmjs.org/package/@mgamil/slug-generator">
+<img src="https://img.shields.io/npm/v/@mgamil/slug-generator.svg" alt="version">
+</a>
+<a href="https://github.com/MohamedGamil/slug-generator/actions/workflows/ci.yml">
+<img src="https://github.com/MohamedGamil/slug-generator/actions/workflows/ci.yml/badge.svg" alt="test status">
+</a>
+<a href="https://coveralls.io/github/MohamedGamil/slug-generator">
+<img src="https://coveralls.io/repos/github/MohamedGamil/slug-generator/badge.svg?branch=main" alt="coverage status">
+</a>
+<a href="https://npmjs.org/package/@mgamil/slug-generator">
+<img src="https://img.shields.io/npm/dw/@mgamil/slug-generator.svg" alt="downloads">
+</a>
+</p>
+
+<br>
+<br>
+
+<p align="center">
+<strong>A powerful, zero-dependency utility for generating secure slugs and sanitizing UTF-8 text.</strong><br>
+<em>Easily generate cryptographically secure random identifiers, phonetic transliterations, UUIDs, Snowflake IDs, Bloom Filters, and obfuscated sequence counters.</em>
+</p>
+
+<br>
+<br>
+
+## Why @mgamil/slug-generator?
+
+* **Zero-Dependencies & Lightweight** - Self-contained with no heavy node_modules dependencies, keeping your bundle size tiny.
+* **Cryptographically Secure** - Utilizes browser Web Crypto API and Node's fallback to produce bias-free, rejection-sampled random tokens.
+* **Phonetic Transliteration** - Translates non-Latin scripts (Arabic, Cyrillic, Chinese Hanzi, Greek, Hebrew, Japanese, Korean) into readable, spoken ASCII equivalents.
+* **Scale-Out Uniqueness** - Includes high-performance Snowflake ID generation, Bloom Filters, and unique batch pools to scale out slug verification.
+* **Obfuscated Sequence Counters** - Maps sequential IDs (e.g. database primary keys) bijectively to unique scrambled slugs using Knuth's multiplicative hashing, eliminating read-before-write queries.
+* **Robust Normalization** - Supports customizable character mappings, Unicode-preserving modes, and advanced RegExp allowed list validation.
+* **Multi-Environment Support** - Runs seamlessly in Node.js, modern browsers, Cloudflare Workers, and serverless environments.
+
+<br>
+
+## Table of Contents
+
+<details>
+<summary>Click to expand</summary>
+
+- [Why @mgamil/slug-generator?](#why-mgamilslug-generator)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [1. Generating Random Slugs](#1-generating-random-slugs)
+  - [2. Generating Unique Slugs (Database Verification)](#2-generating-unique-slugs-database-verification)
+  - [3. Sanitizing Text to Slugs](#3-sanitizing-text-to-slugs)
+  - [4. Shorthand easy helpers](#4-shorthand-easy-helpers)
+- [Unique Slug Generator Suites](#unique-slug-generator-suites)
+  - [1. Obfuscated Sequence Counters (Recommended)](#1-obfuscated-sequence-counters-recommended)
+  - [2. UUID Slug Generator](#2-uuid-slug-generator)
+  - [3. Snowflake Slug Generator](#3-snowflake-slug-generator)
+  - [4. In-Memory Bloom Filter](#4-in-memory-bloom-filter)
+  - [5. Out-of-Band Database Pools](#5-out-of-band-database-pools)
+- [Environment Support](#environment-support)
+- [Documentation](#documentation)
+- [License](#license)
+
+</details>
+
+<br>
+<hr>
 
 ## Features
 
