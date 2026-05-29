@@ -2,6 +2,20 @@
 
 All notable changes to the `@mgamil/slug-generator` package will be documented in this file.
 
+## [1.6.2] - 2026-05-29
+
+### Added
+- Created a GitHub Actions CI test workflow (`ci.yml`) to automatically lint, build, and run tests on push and pull requests targeting the `main` branch.
+- Integrated Vitest coverage reporting using `@vitest/coverage-v8` with a new `coverage` run script.
+- Created `src/coverage.spec.ts` containing a comprehensive unit test suite targeting edge cases, bounds, and fallback branches, raising statement coverage to **98.93%** and branch coverage to **97.40%**.
+- Added standalone development dependencies for `eslint`, `@eslint/js`, and `typescript-eslint` to support clean lint execution in isolated CI environments.
+- Redesigned `README.md` with a professional hero section, Table of Contents, features list, and updated badges.
+
+### Changed
+- Configured local `.gitignore` to exclude local test/coverage artifacts (`coverage/`, `.vitest-cache/`).
+
+---
+
 ## [1.6.0] - 2026-05-28
 
 ### Added
